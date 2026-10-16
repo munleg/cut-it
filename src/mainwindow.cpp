@@ -3360,7 +3360,7 @@ void MainWindow::updateWindowTitle()
     setWindowTitle(QStringLiteral("%1[*] - %2 - %3")
                        .arg(shownName)
                        .arg(profileText)
-                       .arg(QStringLiteral("Cut-it 0.1 Beta - Hybrid Timeline")));
+                       .arg(QStringLiteral("Cut-it 0.1.1 - Hybrid Timeline")));
 #endif
 }
 

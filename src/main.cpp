@@ -197,7 +197,7 @@ public:
         setOrganizationDomain("meltytech.com");
 #endif
         setApplicationName("Shotcut");
-        setApplicationDisplayName("Cut-it 0.1 Beta");
+        setApplicationDisplayName("Cut-it 0.1.1");
         setApplicationVersion(SHOTCUT_VERSION);
 
         // Process command line options.

@@ -9,7 +9,7 @@
 
 namespace CutItUpdate {
 // Advance this for each distributable build; independent of the upstream MLT version.
-inline constexpr char currentVersion[] = "0.1.0-beta.2";
+inline constexpr char currentVersion[] = "0.1.1";
 struct Version
 {
     QVersionNumber number;

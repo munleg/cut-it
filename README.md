@@ -1,4 +1,4 @@
-# Cut-it 0.1 Beta
+# Cut-it 0.1.1
 
 A free, open-source desktop video editor built on [Shotcut](https://github.com/mltframework/shotcut), with a simpler editing workspace. Windows is the current development focus.
 
@@ -11,9 +11,9 @@ A free, open-source desktop video editor built on [Shotcut](https://github.com/m
 - Ctrl+B to split. Backspace/Delete to delete and close the gap. Shift+Backspace to keep the gap.
 - Customizable keyboard shortcuts and existing Shotcut editing, export, and Undo support.
 
-## Beta status
+## Development status
 
-This is an early beta, not a stability guarantee. The Windows build and five native regression tests pass. Desktop checks cover text creation and style changes, the color entry panel, and effects-gallery loading. Broad hardware testing, full workflow regression coverage, and a unified color-grading panel remain in progress.
+This is an early development release, not a stability guarantee. The Windows build and seven native regression tests pass. Earlier desktop checks cover text creation and style changes, the color entry panel, and effects-gallery loading. Broad hardware testing, live silence-deletion/Undo validation, full workflow regression coverage, and a unified color-grading panel remain in progress.
 
 ## Support Cut-it
 
@@ -31,9 +31,9 @@ Keep build outputs and personal media outside this repository. The NSIS packagin
 
 ## Downloads
 
-Get the Windows installer from [Cut-it 0.1 Beta releases](https://github.com/munleg/cut-it/releases/tag/v0.1.0-beta.1). The beta is unsigned. Save your work and close Cut-it before updating.
+Get the Windows installer from [Cut-it 0.1.1 releases](https://github.com/munleg/cut-it/releases/tag/v0.1.1). The installer is unsigned. Save your work and close Cut-it before updating.
 
-[Application and dependency source downloads](docs/releases/0.1-beta-sources.md) accompany the binary release. These include exact MSYS2 package versions and source-archive links; you do not need to download them to run the editor.
+[Application and dependency source downloads](docs/releases/0.1.1-sources.md) accompany the binary release. These include exact MSYS2 package versions and source-archive links; you do not need to download them to run the editor.
 
 ## Contributing
 
@@ -44,3 +44,4 @@ Report the steps to reproduce, Windows version, media format, and expected behav
 Cut-it is an independent modification of Shotcut and is not affiliated with or endorsed by Meltytech. Shotcut was created by Dan Dennedy, with Brian Matherly and other contributors. Video processing remains powered by MLT and FFmpeg; the interface uses Qt.
 
 Source code is licensed under the GNU General Public License, version 3 or later, except where individual files specify otherwise. See [COPYING](COPYING), original file notices, [upstream documentation](README-SHOTCUT.md), and the bundled font licenses. Original copyright and attribution notices are retained.
+
