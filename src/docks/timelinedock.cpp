@@ -26,10 +26,12 @@
 #include "dialogs/editmarkerdialog.h"
 #include "dialogs/longuitask.h"
 #include "dialogs/resourcedialog.h"
+#include "dialogs/silencedialog.h"
 #include "jobs/meltjob.h"
 #include "mainwindow.h"
 #include "models/audiolevelstask.h"
 #include "models/multitrackmodel.h"
+#include "models/silenceranges.h"
 #include "proxymanager.h"
 #include "qmltypes/qmlapplication.h"
 #include "qmltypes/qmlutilities.h"
@@ -47,6 +49,8 @@
 #include "widgets/noisewidget.h"
 #include "widgets/textproducerwidget.h"
 #include "widgets/toneproducerwidget.h"
+#include <QFileInfo>
+#include <QProcess>
 
 #include <QAction>
 #include <QActionGroup>
@@ -396,6 +400,7 @@ TimelineDock::TimelineDock(QWidget *parent)
     toolbar->addWidget(zoomSlider);
     toolbar->addAction(Actions["timelineZoomInAction"]);
     toolbar->addAction(Actions["timelineZoomFitAction"]);
+    toolbar->addAction(Actions["timelineFindSilenceAction"]);
     toolbar->addSeparator();
     toolbar->addAction(Actions["timelineRecordAudioAction"]);
     // Keep frequent edits visible. Advanced operations retain their menu
@@ -1586,6 +1591,15 @@ void TimelineDock::setupActions()
         emit zoomToFit();
     });
     Actions.add("timelineZoomFitAction", action);
+
+    action = new QAction(tr("Find silence"), this);
+    action->setShortcut(QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_S));
+    connect(action, &QAction::triggered, this, &TimelineDock::findSilence);
+    Actions.add("timelineFindSilenceAction", action, windowTitle());
+    action = new QAction(tr("Delete selected pauses"), this);
+    action->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Return));
+    action->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    Actions.add("timelineDeleteSilenceAction", action, windowTitle());
 
     action = new QAction(tr("Generate"), this);
     action->setWhatsThis(
@@ -3090,10 +3104,191 @@ bool TimelineDock::split(int trackIndex, int clipIndex, int position)
 }
 
 /*!
-    \qmlmethod void TimelineDock::removeSelection(bool withCopy)
-    \brief Removes all selected clips. If \a withCopy is \c true, the clips are
-    copied to the clipboard before removal (cut).
+    Review source-audio silence before applying undoable, single-track edits.
 */
+
+void TimelineDock::findSilence()
+{
+    if (selection().size() != 1) {
+        emit showStatusMessage(tr("Select one audio or video clip to find silence."));
+        return;
+    }
+    const auto selected = selection().first();
+    const int track = selected.y(), clip = selected.x();
+    auto info = m_model.getClipInfo(track, clip);
+    if (!info || isTrackLocked(track) || isBlank(track, clip) || isTransition(track, clip))
+        return;
+    Mlt::Producer producer(producerForClip(track, clip));
+    const QString resource = QString::fromUtf8(producer.get("resource"));
+    const QString service = QString::fromUtf8(producer.get("mlt_service"));
+    if (!service.startsWith(QStringLiteral("avformat")) || !QFileInfo::exists(resource)
+        || producer.get_int("audio_index") < 0 || (clip > 0 && isTransition(track, clip - 1))
+        || isTransition(track, clip + 1)) {
+        emit showStatusMessage(tr(
+            "Find silence needs a normal-speed media clip with audio and no adjacent transition."));
+        return;
+    }
+    MLT.pause();
+    const int originalUndoIndex = MAIN.undoStack()->index();
+    const int start = info->start, frames = info->frame_count;
+    const double fps = producer.get_fps();
+    if (fps <= 0)
+        return;
+    SilenceDialog dialog(this);
+    dialog.resize(720, 420);
+    auto previewButton = new QPushButton(tr("Play / pause preview"), &dialog);
+    dialog.layout()->addWidget(previewButton);
+    bool previewPlaying = false;
+    connect(previewButton, &QPushButton::clicked, &dialog, [&]() {
+        previewPlaying = !previewPlaying;
+        if (previewPlaying)
+            MLT.play();
+        else
+            MLT.pause();
+    });
+    dialog.status->setText(tr("Find pauses, then click a result to seek there. %1 deletes selected "
+                              "pauses. Undo restores the edit.")
+                               .arg(Actions["timelineDeleteSilenceAction"]->shortcut().toString(
+                                   QKeySequence::NativeText)));
+    QProcess process;
+    QByteArray output;
+    QList<QPair<int, int>> ranges;
+    auto deleteAction = Actions["timelineDeleteSilenceAction"];
+    dialog.addAction(deleteAction);
+    auto shortcutConnection = connect(deleteAction, &QAction::triggered, &dialog, [&]() {
+        if (dialog.deleteButton->isEnabled())
+            dialog.deleteButton->click();
+    });
+    auto invalidate = [&]() {
+        dialog.ranges->clear();
+        ranges.clear();
+        dialog.deleteButton->setEnabled(false);
+    };
+    for (auto control : {dialog.threshold, dialog.minimum, dialog.padding})
+        connect(control, &QDoubleSpinBox::valueChanged, &dialog, invalidate);
+    connect(dialog.scanButton, &QPushButton::clicked, &dialog, [&]() {
+        invalidate();
+        output.clear();
+        dialog.scanButton->setEnabled(false);
+        for (auto control : {dialog.threshold, dialog.minimum, dialog.padding})
+            control->setEnabled(false);
+        dialog.status->setText(tr("Scanning source audio… Close to cancel."));
+        QString ffmpeg = QCoreApplication::applicationDirPath() + QStringLiteral("/ffmpeg");
+#ifdef Q_OS_WIN
+        ffmpeg += QStringLiteral(".exe");
+#endif
+        const QString filter = QStringLiteral("silencedetect=noise=%1dB:d=%2")
+                                   .arg(dialog.threshold->value())
+                                   .arg(dialog.minimum->value());
+        process.start(ffmpeg,
+                      {QStringLiteral("-hide_banner"),
+                       QStringLiteral("-nostdin"),
+                       QStringLiteral("-nostats"),
+                       QStringLiteral("-ss"),
+                       QString::number(info->frame_in / fps, 'f', 9),
+                       QStringLiteral("-i"),
+                       resource,
+                       QStringLiteral("-t"),
+                       QString::number(frames / fps, 'f', 9),
+                       QStringLiteral("-map"),
+                       QStringLiteral("0:%1").arg(producer.get_int("audio_index")),
+                       QStringLiteral("-vn"),
+                       QStringLiteral("-af"),
+                       filter,
+                       QStringLiteral("-f"),
+                       QStringLiteral("null"),
+                       QStringLiteral("-")});
+    });
+    connect(&process, &QProcess::readyReadStandardError, &dialog, [&]() {
+        output += process.readAllStandardError();
+        if (output.size() > 16 * 1024 * 1024)
+            process.kill();
+    });
+    auto restoreControls = [&]() {
+        dialog.scanButton->setEnabled(true);
+        for (auto control : {dialog.threshold, dialog.minimum, dialog.padding})
+            control->setEnabled(true);
+    };
+    connect(&process, &QProcess::errorOccurred, &dialog, [&](QProcess::ProcessError) {
+        restoreControls();
+        dialog.status->setText(tr("Audio scan could not run: %1").arg(process.errorString()));
+    });
+    connect(&process,
+            qOverload<int, QProcess::ExitStatus>(&QProcess::finished),
+            &dialog,
+            [&](int code, QProcess::ExitStatus exitStatus) {
+                output += process.readAllStandardError();
+                restoreControls();
+                if (code != 0 || exitStatus != QProcess::NormalExit) {
+                    dialog.status->setText(tr("Audio scan failed. No edits were made."));
+                    return;
+                }
+                ranges = silenceRanges(QString::fromUtf8(output),
+                                       fps,
+                                       frames,
+                                       dialog.padding->value());
+                for (const auto &range : ranges) {
+                    auto item = new QListWidgetItem(tr("%1 – %2 s (%3 s)")
+                                                        .arg((start + range.first) / fps, 0, 'f', 2)
+                                                        .arg((start + range.second) / fps, 0, 'f', 2)
+                                                        .arg((range.second - range.first) / fps,
+                                                             0,
+                                                             'f',
+                                                             2),
+                                                    dialog.ranges);
+                    item->setSelected(true);
+                }
+                dialog.deleteButton->setEnabled(!ranges.isEmpty());
+                dialog.status->setText(tr("Found %1 pauses. Review before deleting; source "
+                                          "analysis does not include audio filters.")
+                                           .arg(ranges.size()));
+            });
+    connect(dialog.ranges, &QListWidget::itemClicked, &dialog, [&](QListWidgetItem *item) {
+        const int row = dialog.ranges->row(item);
+        if (row >= 0 && row < ranges.size())
+            setPosition(start + ranges.at(row).first);
+    });
+    connect(dialog.deleteButton, &QPushButton::clicked, &dialog, [&]() {
+        if (MAIN.undoStack()->index() != originalUndoIndex || isTrackLocked(track)) {
+            dialog.status->setText(tr("Timeline changed. Close this window and scan again."));
+            dialog.deleteButton->setEnabled(false);
+            return;
+        }
+        QList<QPair<int, int>> chosen;
+        for (int i = 0; i < ranges.size(); ++i)
+            if (dialog.ranges->item(i)->isSelected())
+                chosen.append(ranges.at(i));
+        if (chosen.isEmpty())
+            return;
+        MLT.pause();
+        MAIN.undoStack()->beginMacro(tr("Delete silent pauses"));
+        // Back to front preserves original frame positions for earlier ranges.
+        for (int i = chosen.size() - 1; i >= 0; --i) {
+            const int a = start + chosen.at(i).first, b = start + chosen.at(i).second;
+            int index = m_model.clipIndex(track, a);
+            auto current = m_model.getClipInfo(track, index);
+            if (!current)
+                continue;
+            if (b < current->start + current->frame_count)
+                split(track, index, b);
+            if (a > current->start)
+                split(track, index, a);
+            index = m_model.clipIndex(track, a);
+            MAIN.undoStack()->push(
+                new Timeline::RemoveCommand(m_model, m_markersModel, track, index, nullptr, true));
+        }
+        MAIN.undoStack()->endMacro();
+        setSelection();
+        dialog.accept();
+    });
+    dialog.exec();
+    MLT.pause();
+    disconnect(shortcutConnection);
+    if (process.state() != QProcess::NotRunning) {
+        process.kill();
+        process.waitForFinished(1000);
+    }
+}
 
 void TimelineDock::removeSelection(bool withCopy)
 {

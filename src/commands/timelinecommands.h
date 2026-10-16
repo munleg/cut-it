@@ -184,7 +184,8 @@ public:
                   MarkersModel &markersModel,
                   int trackIndex,
                   int clipIndex,
-                  QUndoCommand *parent = 0);
+                  QUndoCommand *parent = 0,
+                  bool singleTrack = false);
     void redo();
     void undo();
 

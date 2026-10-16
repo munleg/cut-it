@@ -145,6 +145,7 @@ public slots:
     void lift(int trackIndex, int clipIndex, bool ignoreTransition = false);
     bool split(int trackIndex, int clipIndex, int position);
     void removeSelection(bool withCopy = false);
+    void findSilence();
     void liftSelection();
     void incrementCurrentTrack(int by);
     void selectTrackHead(int trackIndex);

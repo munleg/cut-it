@@ -469,15 +469,16 @@ RemoveCommand::RemoveCommand(MultitrackModel &model,
                              MarkersModel &markersModel,
                              int trackIndex,
                              int clipIndex,
-                             QUndoCommand *parent)
+                             QUndoCommand *parent,
+                             bool singleTrack)
     : QUndoCommand(parent)
     , m_model(model)
     , m_markersModel(markersModel)
     , m_trackIndex(qBound(0, trackIndex, qMax(model.rowCount() - 1, 0)))
     , m_clipIndex(clipIndex)
     , m_undoHelper(m_model)
-    , m_rippleAllTracks(Settings.timelineRippleAllTracks())
-    , m_rippleMarkers(Settings.timelineRippleMarkers())
+    , m_rippleAllTracks(!singleTrack && Settings.timelineRippleAllTracks())
+    , m_rippleMarkers(!singleTrack && Settings.timelineRippleMarkers())
     , m_markerRemoveStart(-1)
     , m_markerRemoveEnd(-1)
 {
