@@ -24,6 +24,7 @@
 #include "proxymanager.h"
 #include "scrubbar.h"
 #include "settings.h"
+#include "util.h"
 #include "widgets/audioscale.h"
 #include "widgets/docktoolbar.h"
 #include "widgets/newprojectfolder.h"
@@ -162,6 +163,27 @@ Player::Player(QWidget *parent)
         m_projectWidget->show();
     });
     emptyLayout->addStretch();
+    auto supportButton = new QPushButton(tr("Support Cut-it on Patreon"), m_emptyPreview);
+    supportButton->setObjectName("cutItSupportButton");
+    supportButton->setFlat(true);
+    supportButton->setCursor(Qt::PointingHandCursor);
+    supportButton->setToolTip(
+        tr("Optional support for development. Opens Patreon in your browser."));
+    supportButton->setStyleSheet(
+        QStringLiteral("QPushButton { background: transparent; color: #aaaaaa; padding: 6px 12px; }"
+                       "QPushButton:hover { background: #282828; color: #ffffff; }"));
+    emptyLayout->addWidget(supportButton, 0, Qt::AlignHCenter);
+    auto supportHint = new QLabel(tr("Cut-it is free. Your support helps development continue."),
+                                  m_emptyPreview);
+    supportHint->setAlignment(Qt::AlignCenter);
+    supportHint->setWordWrap(true);
+    supportHint->setStyleSheet(QStringLiteral("color: #aaaaaa; padding: 4px;"));
+    emptyLayout->addWidget(supportHint);
+    connect(supportButton, &QPushButton::clicked, this, []() {
+        if (!Util::openUrl(QUrl(QStringLiteral("https://www.patreon.com/Cut_it"))))
+            MAIN.showStatusMessage(
+                tr("Could not open Patreon. Visit patreon.com/Cut_it in your browser."));
+    });
     vlayout->addWidget(m_emptyPreview, 10);
     m_projectWidget->hide();
     vlayout->addStretch();

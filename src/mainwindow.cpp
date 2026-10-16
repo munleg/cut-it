@@ -2801,6 +2801,16 @@ void MainWindow::readWindowSettings()
 
 void MainWindow::setupCutItWorkspace()
 {
+    auto support = new QAction(tr("Support Cut-it on Patreon…"), this);
+    support->setObjectName(QStringLiteral("cutItSupport"));
+    support->setToolTip(tr("Optional support for development. Opens Patreon in your browser."));
+    ui->menuHelp->insertAction(ui->actionAbout_Shotcut, support);
+    Actions.add(QStringLiteral("cutItSupport"), support, tr("Cut-it"));
+    connect(support, &QAction::triggered, this, [this]() {
+        if (!Util::openUrl(QUrl(QStringLiteral("https://www.patreon.com/Cut_it"))))
+            showStatusMessage(
+                tr("Could not open Patreon. Visit patreon.com/Cut_it in your browser."));
+    });
     if (auto video = qobject_cast<Mlt::VideoWidget *>(MLT.videoWidget())) {
         connect(video, &Mlt::VideoWidget::playing, this, []() {
             BackgroundPreviewWork::instance().setPlaying(true);

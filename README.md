@@ -15,6 +15,14 @@ A free, open-source desktop video editor built on [Shotcut](https://github.com/m
 
 This is an early beta, not a stability guarantee. The Windows build and five native regression tests pass. Desktop checks cover text creation and style changes, the color entry panel, and effects-gallery loading. Broad hardware testing, full workflow regression coverage, and a unified color-grading panel remain in progress.
 
+## Support Cut-it
+
+[Support Cut-it on Patreon](https://www.patreon.com/Cut_it) to help fund continued development, improvements, and bug fixes.
+
+Cut-it remains free and open source. Supporting the project is optional; editing features do not require a membership. Visit Patreon for the current supporter tiers and benefits.
+
+You can also find the support link on the app's welcome screen and under **Help → Support Cut-it on Patreon**.
+
 ## Build on Windows
 
 See [Build-CutIt.ps1](Build-CutIt.ps1), [upstream build documentation](README-SHOTCUT.md), and [the development notes](CUT-IT.md). The current local build uses MSYS2 MinGW64, Qt 6, MLT, FFmpeg, CMake and Ninja. The script stages a development build; it does not produce a complete standalone installer by itself.
