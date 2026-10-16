@@ -23,7 +23,9 @@ Keep build outputs and personal media outside this repository. The NSIS packagin
 
 ## Downloads
 
-Public Windows binaries are not published yet. Before distributing the bundled installer, the release must include corresponding source and build information for its GPL/LGPL dependencies as well as Cut-it itself. Do not substitute an upstream source link for the modified release source.
+Get the Windows installer from [Cut-it 0.1 Beta releases](https://github.com/munleg/cut-it/releases/tag/v0.1.0-beta.1). The beta is unsigned. Save your work and close Cut-it before updating.
+
+[Application and dependency source downloads](docs/releases/0.1-beta-sources.md) accompany the binary release. These include exact MSYS2 package versions and source-archive links; you do not need to download them to run the editor.
 
 ## Contributing
 
