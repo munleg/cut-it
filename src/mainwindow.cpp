@@ -16,8 +16,8 @@
  */
 
 #include "mainwindow.h"
-#include "qmltypes/cutitfonts.h"
 #include "backgroundpreviewwork.h"
+#include "qmltypes/cutitfonts.h"
 #include "qmltypes/thumbnailprovider.h"
 #include <QElapsedTimer>
 #ifdef Q_OS_WIN
@@ -321,8 +321,8 @@ void MainWindow::setupAndConnectUndoStack()
     redoAction->setIconText(tr("Redo"));
     undoAction->setShortcut(QString::fromLatin1("Ctrl+Z"));
 #ifdef Q_OS_WIN
-    redoAction->setShortcuts({QKeySequence(QStringLiteral("Ctrl+Shift+Z")),
-                              QKeySequence(QStringLiteral("Ctrl+Y"))});
+    redoAction->setShortcuts(
+        {QKeySequence(QStringLiteral("Ctrl+Shift+Z")), QKeySequence(QStringLiteral("Ctrl+Y"))});
 #else
     redoAction->setShortcut(QString::fromLatin1("Ctrl+Shift+Z"));
 #endif
@@ -2810,7 +2810,8 @@ void MainWindow::setupCutItWorkspace()
         });
         // Opt-in local diagnostics; no per-frame logging in normal use.
         if (qEnvironmentVariableIsSet("CUTIT_PLAYBACK_DIAGNOSTICS")) {
-            struct PlaybackProbe {
+            struct PlaybackProbe
+            {
                 QElapsedTimer clock;
                 qint64 previousMs = -1;
                 qint64 maxGap = 0;
@@ -2846,9 +2847,8 @@ void MainWindow::setupCutItWorkspace()
     setProperty("cutItCleanWorkspace", true);
     const auto editActions = ui->menuEdit->actions();
     for (auto action : ui->mainToolBar->actions()) {
-        if (action != ui->actionOpen && action != ui->actionSave
-            && action != ui->actionPlaylist && action != ui->actionEncode
-            && !editActions.contains(action))
+        if (action != ui->actionOpen && action != ui->actionSave && action != ui->actionPlaylist
+            && action != ui->actionEncode && !editActions.contains(action))
             ui->mainToolBar->removeAction(action);
     }
     ui->actionOpen->setText(tr("Import"));
@@ -2868,15 +2868,15 @@ void MainWindow::setupCutItWorkspace()
     palette.setColor(QPalette::Text, QColor("#eeeeee"));
     palette.setColor(QPalette::ButtonText, QColor("#eeeeee"));
     qApp->setPalette(palette);
-    setStyleSheet(QStringLiteral(
-        "QMainWindow::separator { background: #101010; width: 6px; height: 6px; }"
-        "QDockWidget::title { padding: 8px; background: #202020; }"
-        "QToolBar { border: none; spacing: 6px; padding: 5px; }"
-        "QToolButton { padding: 6px; border: none; border-radius: 5px; }"
-        "QToolButton:hover { background: #383838; }"
-        "QToolButton:checked { background: #505050; }"
-        "QTabBar::tab { padding: 7px 14px; border: none; }"
-        "QTabBar::tab:selected { background: #303030; color: #ffffff; }"));
+    setStyleSheet(
+        QStringLiteral("QMainWindow::separator { background: #101010; width: 6px; height: 6px; }"
+                       "QDockWidget::title { padding: 8px; background: #202020; }"
+                       "QToolBar { border: none; spacing: 6px; padding: 5px; }"
+                       "QToolButton { padding: 6px; border: none; border-radius: 5px; }"
+                       "QToolButton:hover { background: #383838; }"
+                       "QToolButton:checked { background: #505050; }"
+                       "QTabBar::tab { padding: 7px 14px; border: none; }"
+                       "QTabBar::tab:selected { background: #303030; color: #ffffff; }"));
     ui->actionPlaylist->setText(tr("Media"));
     m_playlistDock->setWindowTitle(tr("Media"));
     auto tools = new QToolButton(ui->mainToolBar);
@@ -2885,8 +2885,11 @@ void MainWindow::setupCutItWorkspace()
     tools->setPopupMode(QToolButton::InstantPopup);
     auto menu = new QMenu(tools);
     tools->setMenu(menu);
-    const QStringList modes{tr("Editing"), tr("Color Grading"), tr("Effects"),
-                            tr("Text"), tr("Audio")};
+    const QStringList modes{tr("Editing"),
+                            tr("Color Grading"),
+                            tr("Effects"),
+                            tr("Text"),
+                            tr("Audio")};
     for (int mode = 0; mode < modes.size(); ++mode) {
         auto action = menu->addAction(modes.at(mode));
         Actions.add(QStringLiteral("cutItTool%1").arg(mode), action, tr("Cut-it"));
@@ -2906,8 +2909,9 @@ void MainWindow::setupCutItWorkspace()
             m_filtersDock->setWindowTitle(modes.at(mode));
             m_filtersDock->setWorkspaceMode(mode);
             model->setFilter(mode == 4 ? MetadataModel::AudioFilter : MetadataModel::VideoFilter);
-            model->setSearch(mode == 1 ? QStringLiteral("#color")
-                                      : mode == 3 ? QStringLiteral("text") : QString());
+            model->setSearch(mode == 1   ? QStringLiteral("#color")
+                             : mode == 3 ? QStringLiteral("text")
+                                         : QString());
             m_filtersDock->show();
             m_filtersDock->raise();
             if (mode == 3) {
@@ -2962,9 +2966,9 @@ void MainWindow::setupCutItWorkspace()
     ui->menuPlayer->addMenu(playbackMenu);
     playbackMenu->setTitle(tr("Preview quality"));
     playback->hide();
-    tools->setStyleSheet(QStringLiteral(
-        "QToolButton { padding: 7px 12px; border-radius: 6px; }"
-        "QToolButton:hover { background-color: palette(highlight); }"));
+    tools->setStyleSheet(
+        QStringLiteral("QToolButton { padding: 7px 12px; border-radius: 6px; }"
+                       "QToolButton:hover { background-color: palette(highlight); }"));
     m_timelineDock->show();
     m_playlistDock->show();
     m_playlistDock->raise();

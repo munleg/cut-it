@@ -17,10 +17,10 @@
 
 #ifndef CUTITFONTS_H
 #define CUTITFONTS_H
+#include <functional>
+#include <QNetworkAccessManager>
 #include <QObject>
 #include <QStringList>
-#include <QNetworkAccessManager>
-#include <functional>
 
 class CutItFonts : public QObject
 {
@@ -41,6 +41,7 @@ public:
 signals:
     void familiesChanged();
     void statusChanged();
+
 private:
     bool load(const QString &path);
     void release();

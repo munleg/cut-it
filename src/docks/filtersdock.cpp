@@ -36,8 +36,8 @@
 #include <QAction>
 #include <QApplication>
 #include <QDir>
-#include <QIcon>
 #include <QFileInfo>
+#include <QIcon>
 #include <QMenu>
 #include <QQmlContext>
 #include <QQmlEngine>

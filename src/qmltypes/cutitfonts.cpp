@@ -16,11 +16,11 @@
  */
 
 #include "cutitfonts.h"
-#include <QDir>
 #include <QCryptographicHash>
+#include <QDir>
 #include <QFile>
-#include <QGuiApplication>
 #include <QFontDatabase>
+#include <QGuiApplication>
 #include <QNetworkReply>
 #include <QRegularExpression>
 #include <QSaveFile>
@@ -32,7 +32,8 @@
 static QList<CutItFonts *> fontInstances;
 
 CutItFonts::CutItFonts(const QString &cache, const QString &bundled, QObject *parent)
-    : QObject(parent), m_cache(cache)
+    : QObject(parent)
+    , m_cache(cache)
 {
     fontInstances.append(this);
     for (const auto &folder : {bundled, cache}) {
@@ -65,12 +66,17 @@ void CutItFonts::release()
     m_fontIds.clear();
 #ifdef Q_OS_WIN
     for (const auto &path : m_registeredPaths)
-        RemoveFontResourceExW(reinterpret_cast<LPCWSTR>(QDir::toNativeSeparators(path).utf16()), 0, nullptr);
+        RemoveFontResourceExW(reinterpret_cast<LPCWSTR>(QDir::toNativeSeparators(path).utf16()),
+                              0,
+                              nullptr);
 #endif
     m_registeredPaths.clear();
 }
 
-QStringList CutItFonts::families() const { return QFontDatabase::families(); }
+QStringList CutItFonts::families() const
+{
+    return QFontDatabase::families();
+}
 QStringList CutItFonts::googleFamilies() const
 {
     return {"Lato", "Noto Sans", "Bebas Neue", "Roboto", "Open Sans", "Oswald", "Lora", "Pacifico"};
@@ -89,18 +95,22 @@ bool CutItFonts::load(const QString &path)
     const auto folder = QDir(m_cache).filePath("registered");
     if (!QDir().mkpath(folder))
         return false;
-    loadedPath = QDir(folder).filePath(QString::fromLatin1(
-        QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex()) + ".ttf");
+    loadedPath = QDir(folder).filePath(
+        QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())
+        + ".ttf");
     if (!QFile::exists(loadedPath)) {
         QSaveFile cached(loadedPath);
-        if (!cached.open(QIODevice::WriteOnly) || cached.write(bytes) != bytes.size() || !cached.commit())
+        if (!cached.open(QIODevice::WriteOnly) || cached.write(bytes) != bytes.size()
+            || !cached.commit())
             return false;
     }
     if (m_registeredPaths.contains(loadedPath))
         return true;
     // Session-visible registration also makes the font available to the separate
     // MLT export process. No registry entry or system font directory is changed.
-    if (!AddFontResourceExW(reinterpret_cast<LPCWSTR>(QDir::toNativeSeparators(loadedPath).utf16()), 0, nullptr))
+    if (!AddFontResourceExW(reinterpret_cast<LPCWSTR>(QDir::toNativeSeparators(loadedPath).utf16()),
+                            0,
+                            nullptr))
         return false;
     m_registeredPaths.append(loadedPath);
 #endif
@@ -109,7 +119,10 @@ bool CutItFonts::load(const QString &path)
         m_fontIds.append(id);
 #ifdef Q_OS_WIN
     else {
-        RemoveFontResourceExW(reinterpret_cast<LPCWSTR>(QDir::toNativeSeparators(loadedPath).utf16()), 0, nullptr);
+        RemoveFontResourceExW(reinterpret_cast<LPCWSTR>(
+                                  QDir::toNativeSeparators(loadedPath).utf16()),
+                              0,
+                              nullptr);
         m_registeredPaths.removeAll(loadedPath);
     }
 #endif
@@ -127,7 +140,8 @@ void CutItFonts::request(const QUrl &url, std::function<void(QByteArray)> done)
 {
     QNetworkRequest request(url);
     request.setTransferTimeout(20000);
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+                         QNetworkRequest::ManualRedirectPolicy);
     // The CSS API serves complete desktop-compatible TrueType files to this UA.
     request.setRawHeader("User-Agent", "Cut-it/0.1");
     auto reply = m_network.get(request);
@@ -138,7 +152,8 @@ void CutItFonts::request(const QUrl &url, std::function<void(QByteArray)> done)
     connect(reply, &QNetworkReply::finished, this, [this, reply, done]() {
         const auto bytes = reply->readAll();
         const bool ok = reply->error() == QNetworkReply::NoError
-                        && reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() == 200;
+                        && reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt()
+                               == 200;
         reply->deleteLater();
         if (!ok || bytes.isEmpty() || bytes.size() > 16 * 1024 * 1024) {
             finish(tr("Download failed. Your installed fonts still work offline."));
@@ -175,24 +190,27 @@ void CutItFonts::download(const QString &family)
             QString slug = family.toLower();
             slug.remove(' ');
             // Preserve the font's own copyright and license beside the cached file.
-            request(QUrl("https://raw.githubusercontent.com/google/fonts/main/ofl/" + slug + "/OFL.txt"),
+            request(QUrl("https://raw.githubusercontent.com/google/fonts/main/ofl/" + slug
+                         + "/OFL.txt"),
                     [this, family, slug, font](const QByteArray &license) {
-                if (!QDir().mkpath(m_cache)) {
-                    finish(tr("Could not create the font cache."));
-                    return;
-                }
-                const QString path = QDir(m_cache).filePath(slug + ".ttf");
-                QSaveFile licenseFile(QDir(m_cache).filePath(slug + "-OFL.txt"));
-                QSaveFile fontFile(path);
-                if (!licenseFile.open(QIODevice::WriteOnly) || licenseFile.write(license) != license.size()
-                    || !licenseFile.commit() || !fontFile.open(QIODevice::WriteOnly)
-                    || fontFile.write(font) != font.size() || !fontFile.commit() || !load(path)) {
-                    finish(tr("Could not load this font. Try another family."));
-                    return;
-                }
-                emit familiesChanged();
-                finish(tr("%1 is ready. Choose it in Font.").arg(family));
-            });
+                        if (!QDir().mkpath(m_cache)) {
+                            finish(tr("Could not create the font cache."));
+                            return;
+                        }
+                        const QString path = QDir(m_cache).filePath(slug + ".ttf");
+                        QSaveFile licenseFile(QDir(m_cache).filePath(slug + "-OFL.txt"));
+                        QSaveFile fontFile(path);
+                        if (!licenseFile.open(QIODevice::WriteOnly)
+                            || licenseFile.write(license) != license.size() || !licenseFile.commit()
+                            || !fontFile.open(QIODevice::WriteOnly)
+                            || fontFile.write(font) != font.size() || !fontFile.commit()
+                            || !load(path)) {
+                            finish(tr("Could not load this font. Try another family."));
+                            return;
+                        }
+                        emit familiesChanged();
+                        finish(tr("%1 is ready. Choose it in Font.").arg(family));
+                    });
         });
     });
 }

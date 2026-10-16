@@ -24,13 +24,13 @@
 #include "docks/playlistdock.h"
 #include "mainwindow.h"
 #include "mixtransitionorder.h"
-#include "splitwaveformcache.h"
 #include "mltcontroller.h"
 #include "proxymanager.h"
 #include "qmltypes/qmlmetadata.h"
 #include "settings.h"
 #include "sharedframe.h"
 #include "shotcut_mlt_properties.h"
+#include "splitwaveformcache.h"
 #include "util.h"
 
 #include <QApplication>

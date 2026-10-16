@@ -50,6 +50,7 @@ public:
         m_stopping = true;
         m_ready.wakeAll();
     }
+
 private:
     QMutex m_mutex;
     QWaitCondition m_ready;

@@ -547,8 +547,6 @@ int main(int argc, char **argv)
     ::qputenv(kWatchdogEnvVar, "1");
 #endif
     if (::qEnvironmentVariableIsSet(kWatchdogEnvVar)) {
-
-
         // Log some basic info.
         LOG_INFO() << "Starting Shotcut version" << SHOTCUT_VERSION;
 #if defined(Q_OS_WIN)
@@ -593,7 +591,6 @@ int main(int argc, char **argv)
         }
         Settings.log();
 
-
         a.processEvents();
 
         // Expire old items from the qmlcache
@@ -633,7 +630,6 @@ int main(int argc, char **argv)
         a.mainWindow->show();
         a.processEvents();
         a.mainWindow->setFullScreen(a.isFullScreen);
-
 
         // Set up a local IPC server so the watchdog parent can forward
         // QFileOpenEvent file paths (e.g. files opened from Finder on macOS)

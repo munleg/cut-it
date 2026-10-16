@@ -20,10 +20,10 @@
 
 #include <MltProducer.h>
 #include <MltProfile.h>
+#include <atomic>
 #include <QList>
 #include <QPersistentModelIndex>
 #include <QRunnable>
-#include <atomic>
 
 class AudioLevelsTask : public QRunnable
 {

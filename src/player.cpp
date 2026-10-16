@@ -135,16 +135,18 @@ Player::Player(QWidget *parent)
     vlayout->addWidget(m_projectWidget, 10);
     m_emptyPreview = new QWidget(this);
     m_emptyPreview->setObjectName("cutItEmptyPreview");
-    m_emptyPreview->setStyleSheet(QStringLiteral(
-        "QWidget#cutItEmptyPreview { background: #101010; border-radius: 8px; }"
-        "QPushButton { padding: 10px 22px; border-radius: 6px; background: #505050; color: white; }"));
+    m_emptyPreview->setStyleSheet(
+        QStringLiteral("QWidget#cutItEmptyPreview { background: #101010; border-radius: 8px; }"
+                       "QPushButton { padding: 10px 22px; border-radius: 6px; background: #505050; "
+                       "color: white; }"));
     auto emptyLayout = new QVBoxLayout(m_emptyPreview);
     emptyLayout->addStretch();
     auto emptyTitle = new QLabel(tr("Your video starts here"), m_emptyPreview);
     emptyTitle->setAlignment(Qt::AlignCenter);
     emptyTitle->setStyleSheet(QStringLiteral("font-size: 22px; color: #eeeeee;"));
     emptyLayout->addWidget(emptyTitle);
-    auto emptyHint = new QLabel(tr("Import a video, image or audio file to start editing."), m_emptyPreview);
+    auto emptyHint = new QLabel(tr("Import a video, image or audio file to start editing."),
+                                m_emptyPreview);
     emptyHint->setAlignment(Qt::AlignCenter);
     emptyHint->setWordWrap(true);
     emptyHint->setStyleSheet(QStringLiteral("color: #aaaaaa; padding: 8px;"));
@@ -225,10 +227,11 @@ Player::Player(QWidget *parent)
     m_previewSeek->setAccessibleName(tr("Preview position"));
     m_previewSeek->setEnabled(false);
     m_previewSeek->setFixedHeight(16);
-    m_previewSeek->setStyleSheet(QStringLiteral(
-        "QSlider::groove:horizontal { height: 3px; background: #383838; }"
-        "QSlider::sub-page:horizontal { background: #ffffff; }"
-        "QSlider::handle:horizontal { background: #eeeeee; width: 9px; margin: -3px 0; border-radius: 4px; }"));
+    m_previewSeek->setStyleSheet(
+        QStringLiteral("QSlider::groove:horizontal { height: 3px; background: #383838; }"
+                       "QSlider::sub-page:horizontal { background: #ffffff; }"
+                       "QSlider::handle:horizontal { background: #eeeeee; width: 9px; margin: -3px "
+                       "0; border-radius: 4px; }"));
     vlayout->addWidget(m_previewSeek);
     connect(m_previewSeek, &QSlider::valueChanged, this, &Player::seek);
 

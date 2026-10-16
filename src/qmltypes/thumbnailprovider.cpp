@@ -25,9 +25,9 @@
 #include "settings.h"
 #include "util.h"
 
+#include <atomic>
 #include <QCryptographicHash>
 #include <QQuickImageProvider>
-#include <atomic>
 
 static std::atomic_bool stoppingThumbnails{false};
 
@@ -84,16 +84,20 @@ QImage ThumbnailProvider::requestImage(const QString &id, QSize *size, const QSi
             // Cache hits remain available during playback. Only new decoding waits.
             if (!BackgroundPreviewWork::instance().waitUntilIdle())
                 return QImage();
-            const QString decoderKey = service + QLatin1Char('\n') + resource
-                                       + QLatin1Char('\n') + hash;
+            const QString decoderKey = service + QLatin1Char('\n') + resource + QLatin1Char('\n')
+                                       + hash;
             const bool reusable = service.startsWith("avformat");
             if (!reusable || force || !m_decoder || m_decoderKey != decoderKey) {
                 m_decoder.reset();
                 m_decoderKey = decoderKey;
                 if (service == "count") {
-                    m_decoder.reset(new Mlt::Producer(m_profile, service.toUtf8().constData(), "loader-nogl"));
-                } else if (!Settings.playerGPU() || (service != "xml-nogl" && service != "consumer")) {
-                    m_decoder.reset(new Mlt::Producer(m_profile, service.toUtf8().constData(), resource.toUtf8().constData()));
+                    m_decoder.reset(
+                        new Mlt::Producer(m_profile, service.toUtf8().constData(), "loader-nogl"));
+                } else if (!Settings.playerGPU()
+                           || (service != "xml-nogl" && service != "consumer")) {
+                    m_decoder.reset(new Mlt::Producer(m_profile,
+                                                      service.toUtf8().constData(),
+                                                      resource.toUtf8().constData()));
                 }
                 if (m_decoder && m_decoder->is_valid()) {
                     m_decoder->set("audio_index", -1);

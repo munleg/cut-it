@@ -21,8 +21,8 @@
 
 #include <MltProducer.h>
 #include <MltProfile.h>
-#include <QQuickImageProvider>
 #include <QMutex>
+#include <QQuickImageProvider>
 #include <QScopedPointer>
 
 class ThumbnailProvider : public QQuickImageProvider

@@ -335,12 +335,12 @@ PlaylistDock::PlaylistDock(QWidget *parent)
 {
     LOG_DEBUG() << "begin";
     ui->setupUi(this);
-    ui->textBrowser->setHtml(tr(
-        "<div style='text-align:center; margin:24px;'>"
-        "<h3>Your media</h3>"
-        "<p><a href='import' style='color:#eeeeee'>Click to import media</a></p>"
-        "<p>Or drop files here.</p>"
-        "<p>Drag a clip to the timeline to start editing.</p></div>"));
+    ui->textBrowser->setHtml(
+        tr("<div style='text-align:center; margin:24px;'>"
+           "<h3>Your media</h3>"
+           "<p><a href='import' style='color:#eeeeee'>Click to import media</a></p>"
+           "<p>Or drop files here.</p>"
+           "<p>Drag a clip to the timeline to start editing.</p></div>"));
     ui->textBrowser->setOpenLinks(false);
     connect(ui->textBrowser, &QTextBrowser::anchorClicked, this, [this](const QUrl &) {
         onAddFilesActionTriggered();
@@ -479,22 +479,27 @@ PlaylistDock::PlaylistDock(QWidget *parent)
     toolbar->addAction(Actions["playlistViewIconsAction"]);
     toolbar->addSeparator();
     auto displayMenu = m_mainMenu->addMenu(tr("Media display"));
-    for (const auto &key : {"playlistViewDetailsAction", "playlistViewTilesAction",
-                           "playlistViewIconsAction"})
+    for (const auto &key :
+         {"playlistViewDetailsAction", "playlistViewTilesAction", "playlistViewIconsAction"})
         displayMenu->addAction(Actions[key]);
-    for (const auto &key : {"playlistNewBin", "playlistAppendCutAction",
-                           "playlistRemoveCutAction", "playlistUpdateAction",
-                           "playlistViewDetailsAction", "playlistViewTilesAction",
-                           "playlistViewIconsAction"})
+    for (const auto &key : {"playlistNewBin",
+                            "playlistAppendCutAction",
+                            "playlistRemoveCutAction",
+                            "playlistUpdateAction",
+                            "playlistViewDetailsAction",
+                            "playlistViewTilesAction",
+                            "playlistViewIconsAction"})
         toolbar->removeAction(Actions[key]);
     for (auto action : toolbar->actions()) {
         if (action->isSeparator())
             toolbar->removeAction(action);
     }
     Actions["playlistAddFilesAction"]->setIconText(tr("Import media"));
-    if (auto button = qobject_cast<QToolButton *>(toolbar->widgetForAction(Actions["playlistAddFilesAction"]))) {
+    if (auto button = qobject_cast<QToolButton *>(
+            toolbar->widgetForAction(Actions["playlistAddFilesAction"]))) {
         button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-        button->setStyleSheet(QStringLiteral("QToolButton { min-width: 110px; width: 110px; padding: 2px 8px; }"));
+        button->setStyleSheet(
+            QStringLiteral("QToolButton { min-width: 110px; width: 110px; padding: 2px 8px; }"));
     }
     m_label = new QLabel(toolbar);
     toolbar->addWidget(m_label);

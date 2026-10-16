@@ -29,14 +29,14 @@ inline bool copySplitWaveform(Mlt::Producer &source, Mlt::Producer &destination)
     source.lock();
     auto levels = static_cast<QByteArray *>(source.get_data(kAudioLevelsProperty));
     QByteArray *copy = nullptr;
-    if (levels && source.get_length() > 0
-        && levels->size() >= qint64(source.get_length()) * 2)
+    if (levels && source.get_length() > 0 && levels->size() >= qint64(source.get_length()) * 2)
         copy = new QByteArray(*levels);
     source.unlock();
     if (!copy)
         return false;
-    destination.set(kAudioLevelsProperty, copy, 0,
-                    [](void *data) { delete static_cast<QByteArray *>(data); });
+    destination.set(kAudioLevelsProperty, copy, 0, [](void *data) {
+        delete static_cast<QByteArray *>(data);
+    });
     return true;
 }
 

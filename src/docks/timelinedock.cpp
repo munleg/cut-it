@@ -400,13 +400,21 @@ TimelineDock::TimelineDock(QWidget *parent)
     toolbar->addAction(Actions["timelineRecordAudioAction"]);
     // Keep frequent edits visible. Advanced operations retain their menu
     // entries and keyboard shortcuts without filling the timeline toolbar.
-    for (const auto &key : {"timelineAppendAction", "timelineLiftAction",
-                           "timelineOverwriteAction", "timelineMarkerAction",
-                           "timelinePrevMarkerAction", "timelineNextMarkerAction",
-                           "timelineScrubDragAction", "timelineRippleAllTracksAction",
-                           "timelineRippleMarkersAction", "timelineRecordAudioAction",
-                           "timelineCutAction", "timelineCopyAction", "timelinePasteAction",
-                           "timelineDeleteAction", "timelineRippleAction"})
+    for (const auto &key : {"timelineAppendAction",
+                            "timelineLiftAction",
+                            "timelineOverwriteAction",
+                            "timelineMarkerAction",
+                            "timelinePrevMarkerAction",
+                            "timelineNextMarkerAction",
+                            "timelineScrubDragAction",
+                            "timelineRippleAllTracksAction",
+                            "timelineRippleMarkersAction",
+                            "timelineRecordAudioAction",
+                            "timelineCutAction",
+                            "timelineCopyAction",
+                            "timelinePasteAction",
+                            "timelineDeleteAction",
+                            "timelineRippleAction"})
         toolbar->removeAction(Actions[key]);
     toolbar->insertAction(Actions["timelineSplitAction"], Actions["timelineDeleteAction"]);
     Actions["timelineDeleteAction"]->setIconText(tr("Delete"));
@@ -419,7 +427,8 @@ TimelineDock::TimelineDock(QWidget *parent)
     for (const auto &key : {"timelineDeleteAction", "timelineSplitAction", "timelineSnapAction"}) {
         if (auto button = qobject_cast<QToolButton *>(toolbar->widgetForAction(Actions[key]))) {
             button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-            button->setStyleSheet(QStringLiteral("QToolButton { min-width: 70px; width: 70px; padding: 2px 8px; }"));
+            button->setStyleSheet(
+                QStringLiteral("QToolButton { min-width: 70px; width: 70px; padding: 2px 8px; }"));
         }
     }
     auto detailsAction = new QAction(tr("Details"), this);
@@ -445,7 +454,8 @@ TimelineDock::TimelineDock(QWidget *parent)
     toolbar->addAction(detailsAction);
     if (auto button = qobject_cast<QToolButton *>(toolbar->widgetForAction(detailsAction))) {
         button->setToolButtonStyle(Qt::ToolButtonTextOnly);
-        button->setStyleSheet(QStringLiteral("QToolButton { min-width: 70px; width: 70px; padding: 2px 8px; }"));
+        button->setStyleSheet(
+            QStringLiteral("QToolButton { min-width: 70px; width: 70px; padding: 2px 8px; }"));
     }
     vboxLayout->setMenuBar(toolbar);
 
@@ -1167,8 +1177,8 @@ void TimelineDock::setupActions()
     Actions.add("timelineSplitAction", action);
 
     action = new QAction(tr("Split All Tracks At Playhead"), this);
-    action->setShortcuts({QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_B),
-                          QKeySequence(Qt::SHIFT | Qt::Key_S)});
+    action->setShortcuts(
+        {QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_B), QKeySequence(Qt::SHIFT | Qt::Key_S)});
     action->setAutoRepeat(false);
     connect(action, &QAction::triggered, this, [&]() {
         if (!isMultitrackValid())
