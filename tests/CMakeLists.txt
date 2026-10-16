@@ -43,3 +43,8 @@ add_executable(test_silence_ranges test_silence_ranges.cpp)
 target_include_directories(test_silence_ranges PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_silence_ranges PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME silence_ranges COMMAND test_silence_ranges)
+
+add_executable(test_cutit_update test_cutit_update.cpp)
+target_include_directories(test_cutit_update PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_cutit_update PRIVATE Qt6::Core Qt6::Test)
+add_test(NAME cutit_update COMMAND test_cutit_update)

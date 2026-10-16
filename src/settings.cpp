@@ -1568,12 +1568,12 @@ void ShotcutSettings::setNoUpgrade(bool value)
 
 bool ShotcutSettings::checkUpgradeAutomatic()
 {
-    return settings.value("checkUpgradeAutomatic", false).toBool();
+    return settings.value("cutit/checkUpgradeAutomatic", true).toBool();
 }
 
 void ShotcutSettings::setCheckUpgradeAutomatic(bool b)
 {
-    settings.setValue("checkUpgradeAutomatic", b);
+    settings.setValue("cutit/checkUpgradeAutomatic", b);
 }
 
 bool ShotcutSettings::askUpgradeAutomatic()

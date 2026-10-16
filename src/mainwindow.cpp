@@ -17,6 +17,7 @@
 
 #include "mainwindow.h"
 #include "backgroundpreviewwork.h"
+#include "cutitupdate.h"
 #include "qmltypes/cutitfonts.h"
 #include "qmltypes/thumbnailprovider.h"
 #include <QElapsedTimer>
@@ -155,7 +156,12 @@ static QRegularExpression kBackupFileRegex("^(.+) "
 
 static QNetworkRequest versionCheckRequest()
 {
-    QNetworkRequest request{QUrl(QStringLiteral("https://check.shotcut.org/version.json"))};
+    QNetworkRequest request{
+        QUrl(QStringLiteral("https://api.github.com/repos/munleg/cut-it/releases?per_page=100"))};
+    request.setRawHeader("Accept", "application/vnd.github+json");
+    request.setRawHeader("User-Agent", QByteArray("Cut-it/") + CutItUpdate::currentVersion);
+    request.setRawHeader("X-GitHub-Api-Version", "2022-11-28");
+    request.setTransferTimeout(15000);
     // Keep an HTTPS response from being followed onto cleartext HTTP.
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
@@ -172,7 +178,7 @@ MainWindow::MainWindow()
     , m_multipleFilesLoading(false)
     , m_isPlaylistLoaded(false)
     , m_exitCode(EXIT_SUCCESS)
-    , m_upgradeUrl("https://www.shotcut.org/download/")
+    , m_upgradeUrl("https://github.com/munleg/cut-it/releases")
     , m_keyframesDock(0)
 {
 #if defined(Q_OS_UNIX) && !defined(Q_OS_MAC)
@@ -241,10 +247,14 @@ MainWindow::MainWindow()
 
     centerLayoutInRemainingToolbarSpace();
 
-#ifndef SHOTCUT_NOUPGRADE
-    if (Settings.noUpgrade() || qApp->property("noupgrade").toBool())
-#endif
-        delete ui->actionUpgrade;
+    ui->actionUpgrade->setText(tr("Check for updates…"));
+    auto automaticUpdates = new QAction(tr("Check for updates on startup"), this);
+    automaticUpdates->setCheckable(true);
+    automaticUpdates->setChecked(Settings.checkUpgradeAutomatic());
+    connect(automaticUpdates, &QAction::toggled, this, [](bool checked) {
+        Settings.setCheckUpgradeAutomatic(checked);
+    });
+    ui->menuHelp->addAction(automaticUpdates);
 
     setupAndConnectDocks();
     setupOpenOtherMenu();
@@ -3360,12 +3370,12 @@ void MainWindow::on_actionAbout_Shotcut_triggered()
         "Copyright &copy; 2011-2026 <a href=\"https://www.meltytech.com/\">Meltytech</a>, LLC");
     const auto license = QStringLiteral(
         "<a href=\"https://www.gnu.org/licenses/gpl.html\">GNU General Public License v3.0</a>");
-    const auto url = QStringLiteral("https://www.shotcut.org/");
+    const auto url = QStringLiteral("https://github.com/munleg/cut-it");
     QMessageBox::about(
         this,
         tr("About %1").arg(qApp->applicationName()),
         QStringLiteral(
-            "<h1>Cut-it 0.1 Beta</h1>"
+            "<h1>Cut-it %6</h1>"
             "<p>Based on Shotcut %2. Cut-it is an independent GPL desktop editor.</p>"
             "<p><a href=\"%3\">%1</a> is a free, open source, cross platform video editor.</p>"
             "<small><p>%4</p>"
@@ -3392,7 +3402,12 @@ void MainWindow::on_actionAbout_Shotcut_triggered()
             "This program is distributed in the hope that it will be useful, "
             "but WITHOUT ANY WARRANTY; without even the implied warranty of "
             "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.</small>")
-            .arg(qApp->applicationName(), qApp->applicationVersion(), url, copyright, license));
+            .arg(QStringLiteral("Cut-it"),
+                 qApp->applicationVersion(),
+                 url,
+                 copyright,
+                 license,
+                 QString::fromLatin1(CutItUpdate::currentVersion)));
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event)
@@ -3774,7 +3789,7 @@ void MainWindow::showEvent(QShowEvent *event)
 
 #ifndef SHOTCUT_NOUPGRADE
     if (!Settings.noUpgrade() && !qApp->property("noupgrade").toBool())
-        QTimer::singleShot(0, this, SLOT(showUpgradePrompt()));
+        QTimer::singleShot(5000, this, &MainWindow::showUpgradePrompt);
 #endif
 
 #ifdef Q_OS_WIN
@@ -4825,14 +4840,11 @@ void MainWindow::onShuttle(float x)
 
 void MainWindow::showUpgradePrompt()
 {
-    if (Settings.checkUpgradeAutomatic()) {
-        showStatusMessage("Checking for upgrade...");
-        m_network.get(versionCheckRequest());
-    } else {
-        QAction *action = new QAction(tr("Click here to check for a new version of Shotcut."), 0);
-        connect(action, SIGNAL(triggered(bool)), SLOT(on_actionUpgrade_triggered()));
-        showStatusMessage(action, 15 /* seconds */);
-    }
+    if (!Settings.checkUpgradeAutomatic() || m_upgradeCheckInProgress)
+        return;
+    m_upgradeCheckInProgress = true;
+    auto reply = m_network.get(versionCheckRequest());
+    reply->setProperty("manualUpdateCheck", false);
 }
 
 void MainWindow::on_actionRealtime_triggered(bool checked)
@@ -5685,23 +5697,14 @@ void MainWindow::on_menuExternal_aboutToShow()
 
 void MainWindow::on_actionUpgrade_triggered()
 {
-    if (Settings.askUpgradeAutomatic()) {
-        QMessageBox dialog(QMessageBox::Question,
-                           qApp->applicationName(),
-                           tr("Do you want to automatically check for updates in the future?"),
-                           QMessageBox::No | QMessageBox::Yes,
-                           this);
-        dialog.setWindowModality(QmlApplication::dialogModality());
-        dialog.setDefaultButton(QMessageBox::Yes);
-        dialog.setEscapeButton(QMessageBox::No);
-        dialog.setCheckBox(
-            new QCheckBox(tr("Do not show this anymore.", "Automatic upgrade check dialog")));
-        Settings.setCheckUpgradeAutomatic(dialog.exec() == QMessageBox::Yes);
-        if (dialog.checkBox()->isChecked())
-            Settings.setAskUpgradeAutomatic(false);
+    if (m_upgradeCheckInProgress) {
+        showStatusMessage(tr("An update check is already running."));
+        return;
     }
-    showStatusMessage("Checking for upgrade...");
-    m_network.get(versionCheckRequest());
+    m_upgradeCheckInProgress = true;
+    showStatusMessage(tr("Checking Cut-it releases…"));
+    auto reply = m_network.get(versionCheckRequest());
+    reply->setProperty("manualUpdateCheck", true);
 }
 
 void MainWindow::on_actionOpenXML_triggered()
@@ -5876,41 +5879,43 @@ void MainWindow::onPlayerTabIndexChanged(int index)
 
 void MainWindow::onUpgradeCheckFinished(QNetworkReply *reply)
 {
-    if (!reply->error()) {
-        QByteArray response = reply->readAll();
-        LOG_DEBUG() << "response: " << response;
-        QJsonDocument json = QJsonDocument::fromJson(response);
-        QString current = qApp->applicationVersion();
-
-        if (!json.isNull() && json.object().value("version_string").type() == QJsonValue::String) {
-            QString latest = json.object().value("version_string").toString();
-            if (current != "adhoc"
-                && QVersionNumber::fromString(current) < QVersionNumber::fromString(latest)) {
-                QAction *action = new QAction(
-                    tr("Shotcut version %1 is available! Click here to get it.").arg(latest), 0);
-                connect(action, SIGNAL(triggered(bool)), SLOT(onUpgradeTriggered()));
-                if (!json.object().value("url").isUndefined()) {
-                    const QString candidate = json.object().value("url").toString();
-                    if (Util::isHttpsOnHost(candidate, QStringLiteral("shotcut.org")))
-                        m_upgradeUrl = candidate;
-                }
-                showStatusMessage(action, 15 /* seconds */);
-            } else {
-                showStatusMessage(tr("You are running the latest version of Shotcut."));
-            }
-            reply->deleteLater();
-            return;
-        } else {
-            LOG_WARNING() << "failed to parse version.json";
-        }
-    } else {
-        LOG_WARNING() << reply->errorString();
-    }
-    QAction *action = new QAction(
-        tr("Failed to read version.json when checking. Click here to go to the Web site."), 0);
-    connect(action, SIGNAL(triggered(bool)), SLOT(onUpgradeTriggered()));
-    showStatusMessage(action);
+    m_upgradeCheckInProgress = false;
+    const bool manual = reply->property("manualUpdateCheck").toBool();
+    const auto response = reply->readAll();
+    const auto json = QJsonDocument::fromJson(response);
+    const bool failed = reply->error() != QNetworkReply::NoError || !json.isArray();
     reply->deleteLater();
+    if (failed) {
+        if (manual)
+            showStatusMessage(tr(
+                "Could not check GitHub for updates. Check your connection and try again later."));
+        return;
+    }
+    const auto release = CutItUpdate::latest(json.array(),
+                                             QString::fromLatin1(CutItUpdate::currentVersion));
+    if (release.tag.isEmpty()) {
+        if (manual)
+            showStatusMessage(tr("No newer Cut-it Windows release is available. Installed: %1.")
+                                  .arg(QString::fromLatin1(CutItUpdate::currentVersion)));
+        return;
+    }
+    m_upgradeUrl = release.page.toString();
+    auto prompt = new QMessageBox(
+        QMessageBox::Information,
+        tr("Cut-it update available"),
+        tr("Cut-it %1 is available. You have %2.\n\nOpen the release page to download the "
+           "installer? Save your project and close Cut-it before installing.")
+            .arg(release.tag, QString::fromLatin1(CutItUpdate::currentVersion)),
+        QMessageBox::Yes | QMessageBox::Cancel,
+        this);
+    prompt->setAttribute(Qt::WA_DeleteOnClose);
+    prompt->setDefaultButton(QMessageBox::Cancel);
+    const auto page = release.page;
+    connect(prompt, &QMessageBox::finished, this, [page](int result) {
+        if (result == QMessageBox::Yes)
+            Util::openUrl(page);
+    });
+    prompt->open();
 }
 
 void MainWindow::onUpgradeTriggered()

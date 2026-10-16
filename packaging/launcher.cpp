@@ -24,7 +24,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR args, int) {
     if (FAILED(SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &appdata))) return 1;
     std::wstring settings = std::wstring(appdata) + L"\\Cut-it";
     CoTaskMemFree(appdata);
-    std::wstring command = L"\"" + runtime + L"\\shotcut.exe\" --noupgrade --appdata \"" + settings + L"\" " + args;
+    std::wstring command = L"\"" + runtime + L"\\shotcut.exe\" --appdata \"" + settings + L"\" " + args;
     STARTUPINFOW startup{};
     startup.cb = sizeof(startup);
     PROCESS_INFORMATION process{};

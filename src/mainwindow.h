@@ -220,6 +220,7 @@ private:
     QScopedPointer<QAction> m_statusBarAction;
     QNetworkAccessManager m_network;
     QString m_upgradeUrl;
+    bool m_upgradeCheckInProgress = false;
     KeyframesDock *m_keyframesDock;
     QDateTime m_clipboardUpdatedAt;
     QDateTime m_sourceUpdatedAt;
