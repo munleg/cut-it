@@ -28,11 +28,11 @@ Rectangle {
     id: root
 
     property int headerWidth: multitrack.trackHeaderWidth
-    property color selectedTrackColor: Qt.rgba(0.8, 0.8, 0, 0.3)
+    property color selectedTrackColor: "#404040"
     property alias trackCount: tracksRepeater.count
     property bool stopScrolling: false
-    property color shotcutBlue: Qt.rgba(23 / 255, 92 / 255, 118 / 255, 1)
-    property color adjustmentClipColor: Qt.rgba(92 / 255, 72 / 255, 23 / 255, 1)
+    property color shotcutBlue: "#555555"
+    property color adjustmentClipColor: "#686868"
     property var dragDelta
     property int inlineAudioControlsThreshold: 60
     property int separateTrackHeaderRowsThreshold: 80
@@ -45,6 +45,38 @@ Rectangle {
     signal clipClicked
     signal timelineRightClicked
     signal clipRightClicked
+
+    // A passive handler reveals the control without intercepting ruler scrubbing.
+    Item {
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 36
+        z: 20
+        HoverHandler { id: layerHover }
+        ToolButton {
+            id: addLayerButton
+            anchors.right: parent.right
+            anchors.rightMargin: 12
+            text: "+"
+            width: 34
+            height: 30
+            opacity: layerHover.hovered || hovered || activeFocus || layerMenu.visible ? 1 : 0
+            activeFocusOnTab: true
+            Accessible.name: qsTr("Add layer")
+            ToolTip.visible: hovered
+            ToolTip.text: qsTr("Add video, text, image or audio layer")
+            onClicked: layerMenu.open()
+            Menu {
+                id: layerMenu
+                y: addLayerButton.height
+                MenuItem { text: qsTr("Video layer"); onTriggered: timeline.addCutItLayer(0) }
+                MenuItem { text: qsTr("Text layer"); onTriggered: timeline.addCutItLayer(1) }
+                MenuItem { text: qsTr("Image layer"); onTriggered: timeline.addCutItLayer(2) }
+                MenuItem { text: qsTr("Audio layer"); onTriggered: timeline.addCutItLayer(3) }
+            }
+        }
+    }
 
     function snapToDevicePixel(value) {
         var dpr = Screen.devicePixelRatio;

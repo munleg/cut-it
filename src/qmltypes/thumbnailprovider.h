@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016 Meltytech, LLC
+ * Copyright (c) 2013-2026 Meltytech, LLC
  * Author: Dan Dennedy <dan@dennedy.org>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,11 +22,14 @@
 #include <MltProducer.h>
 #include <MltProfile.h>
 #include <QQuickImageProvider>
+#include <QMutex>
+#include <QScopedPointer>
 
 class ThumbnailProvider : public QQuickImageProvider
 {
 public:
     explicit ThumbnailProvider();
+    static void stopRequests();
     QImage requestImage(const QString &id, QSize *size, const QSize &requestedSize);
 
 private:
@@ -37,6 +40,9 @@ private:
                      int frameNumber);
     QImage makeThumbnail(Mlt::Producer &, int frameNumber, const QSize &requestedSize);
     Mlt::Profile m_profile;
+    QMutex m_requestMutex;
+    QString m_decoderKey;
+    QScopedPointer<Mlt::Producer> m_decoder;
 };
 
 #endif // THUMBNAILPROVIDER_H

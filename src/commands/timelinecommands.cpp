@@ -16,6 +16,7 @@
  */
 
 #include "timelinecommands.h"
+#include <QElapsedTimer>
 
 #include "Logger.h"
 #include "controllers/filtercontroller.h"
@@ -1537,6 +1538,8 @@ SplitCommand::SplitCommand(MultitrackModel &model,
 
 void SplitCommand::redo()
 {
+    QElapsedTimer splitTimer;
+    splitTimer.start();
     LOG_DEBUG() << "trackIndex" << m_trackIndex[0] << "clipIndex" << m_clipIndex[0] << "position"
                 << m_position;
     MAIN.filterController()->pauseUndoTracking();
@@ -1552,6 +1555,7 @@ void SplitCommand::redo()
     }
     m_undoHelper.recordAfterState();
     MAIN.filterController()->resumeUndoTracking();
+    LOG_INFO() << "Cut-it split edit milliseconds:" << splitTimer.elapsed();
 }
 
 void SplitCommand::undo()

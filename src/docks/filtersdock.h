@@ -59,6 +59,8 @@ public slots:
     void onSeeked(int position);
     void onShowFrame(const SharedFrame &frame);
     void openFilterMenu() const;
+    void setWorkspaceMode(int mode);
+    bool openQuickFilter(const QString &directory);
     void showCopyFilterMenu();
     void showAddOnMetadataHelp(const QString &serviceName);
     void onServiceInChanged(int delta, Mlt::Service *service);

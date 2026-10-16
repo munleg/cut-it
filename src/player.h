@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2025 Meltytech, LLC
+ * Copyright (c) 2012-2026 Meltytech, LLC
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -130,6 +130,7 @@ private:
     void seekBy(int frames);
 
     ScrubBar *m_scrubber;
+    QSlider *m_previewSeek;
     TimeSpinBox *m_positionSpinner;
     QLabel *m_durationLabel;
     QLabel *m_inPointLabel;
@@ -167,6 +168,7 @@ private:
     QMenu *m_zoomMenu;
     QMenu *m_mainMenu;
     NewProjectFolder *m_projectWidget;
+    QWidget *m_emptyPreview;
     int m_loopStart;
     int m_loopEnd;
     DockToolBar *m_currentDurationToolBar;

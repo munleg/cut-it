@@ -29,6 +29,7 @@
 #include "models/subtitlesmodel.h"
 #include "qmltypes/qmlapplication.h"
 #include "qmltypes/qmlfilter.h"
+#include "qmltypes/qmlmetadata.h"
 #include "qmltypes/qmlutilities.h"
 #include "qmltypes/qmlview.h"
 
@@ -36,6 +37,7 @@
 #include <QApplication>
 #include <QDir>
 #include <QIcon>
+#include <QFileInfo>
 #include <QMenu>
 #include <QQmlContext>
 #include <QQmlEngine>
@@ -68,6 +70,8 @@ FiltersDock::FiltersDock(MetadataModel *metadataModel,
     setWidget(&m_qview);
 
     QmlUtilities::setCommonProperties(m_qview.rootContext());
+    m_qview.rootContext()->setContextProperty("cutItWorkspaceMode", 2);
+    m_qview.rootContext()->setContextProperty("cutItTools", this);
     m_qview.rootContext()->setContextProperty("view", new QmlView(&m_qview));
     m_qview.rootContext()->setContextProperty("metadatamodel", metadataModel);
     m_qview.rootContext()->setContextProperty("enableAddOns",
@@ -160,6 +164,38 @@ void FiltersDock::onShowFrame(const SharedFrame &frame)
 void FiltersDock::openFilterMenu() const
 {
     QMetaObject::invokeMethod(m_qview.rootObject(), "openFilterMenu");
+}
+
+// Reuse an existing adjustment instead of stacking duplicates on repeated clicks.
+bool FiltersDock::openQuickFilter(const QString &directory)
+{
+    auto controller = MAIN.filterController();
+    auto attached = controller->attachedModel();
+    if (!attached->isProducerSelected())
+        return false;
+    auto matches = [&directory](QmlMetadata *meta) {
+        return meta && QFileInfo(meta->qmlFilePath().toLocalFile()).dir().dirName() == directory;
+    };
+    for (int i = 0; i < attached->rowCount(); ++i) {
+        if (matches(attached->getMetadata(i))) {
+            controller->setCurrentFilter(i);
+            return true;
+        }
+    }
+    auto model = controller->metadataModel();
+    // Scan only eligible entries, respecting CPU/GPU and clip/track restrictions.
+    for (int i = 0; i < model->rowCount(); ++i) {
+        auto meta = model->get(i);
+        if (matches(meta))
+            return attached->add(meta) >= 0;
+    }
+    MAIN.showStatusMessage(tr("This adjustment is unavailable for the current selection."));
+    return false;
+}
+
+void FiltersDock::setWorkspaceMode(int mode)
+{
+    m_qview.rootContext()->setContextProperty("cutItWorkspaceMode", mode);
 }
 
 void FiltersDock::showCopyFilterMenu()

@@ -24,6 +24,16 @@ Rectangle {
     id: root
 
     property int selectedIndex: Shotcut.Filter.NoCurrentFilter
+    readonly property bool simpleTextMode: textWorkspace && filterConfig.item ? filterConfig.item.cutItSimpleEditor === true : false
+    onSimpleTextModeChanged: _setLayout()
+    readonly property bool textWorkspace: cutItWorkspaceMode === 3
+    readonly property bool textHome: textWorkspace && !(metadata && (metadata.objectName === "dynamicText" || metadata.objectName === "richText"))
+    onTextWorkspaceChanged: filterMenu.close()
+    readonly property bool colorWorkspace: cutItWorkspaceMode === 1
+    property bool showColorHome: true
+    readonly property bool colorHome: colorWorkspace && showColorHome
+    onColorWorkspaceChanged: { showColorHome = true; filterMenu.close(); }
+
 
     signal currentFilterRequested(int attachedIndex)
     signal copyFilterRequested
@@ -50,7 +60,9 @@ Rectangle {
     }
 
     function _setLayout() {
-        if (height > width - attachedFilters.minimumWidth)
+        if (simpleTextMode)
+            root.state = "simpleText";
+        else if (height > width - attachedFilters.minimumWidth)
             root.state = "portrait";
         else
             root.state = "landscape";
@@ -61,6 +73,13 @@ Rectangle {
     onWidthChanged: _setLayout()
     onHeightChanged: _setLayout()
     states: [
+        State {
+            name: "simpleText"
+            AnchorChanges {
+                target: filterConfigScrollView
+                anchors { top: root.top; bottom: root.bottom; left: root.left; right: root.right }
+            }
+        },
         State {
             name: "landscape"
 
@@ -98,7 +117,7 @@ Rectangle {
             PropertyChanges {
                 target: attachedContainer
                 width: titleBackground.width
-                height: 165
+                height: moreControls.checked ? 210 : 125
             }
         }
     ]
@@ -111,7 +130,7 @@ Rectangle {
         id: titleBackground
 
         color: activePalette.highlight
-        visible: attachedfiltersmodel.producerTitle != ""
+        visible: !root.colorHome && !root.textHome && !root.simpleTextMode && attachedfiltersmodel.producerTitle != ""
         radius: 12
 
         anchors {
@@ -127,6 +146,7 @@ Rectangle {
 
     Label {
         id: titleLabel
+        visible: !root.colorHome && !root.textHome && !root.simpleTextMode
 
         text: attachedfiltersmodel.producerTitle
         elide: Text.ElideLeft
@@ -148,8 +168,9 @@ Rectangle {
 
     GridLayout {
         id: attachedContainer
+        visible: !root.colorHome && !root.textHome && !root.simpleTextMode
 
-        columns: children.length - 1
+        columns: 3
 
         anchors {
             top: titleBackground.bottom
@@ -183,25 +204,25 @@ Rectangle {
         Shotcut.Button {
             id: addButton
 
-            implicitWidth: height
+            text: root.colorWorkspace ? qsTr("Adjustments") : qsTr("Add effect")
             icon.name: 'list-add'
             icon.source: 'qrc:///icons/oxygen/32x32/actions/list-add.png'
             enabled: attachedfiltersmodel.isProducerSelected
             opacity: enabled ? 1 : 0.5
             onClicked: {
-                if (application.confirmOutputFilter())
-                    filterMenu.open();
+                if (root.colorWorkspace) root.showColorHome = true;
+                else if (application.confirmOutputFilter()) filterMenu.open();
             }
 
             Shotcut.HoverTip {
-                text: qsTr('Add a filter') + application.actionFirstShortcut('filtersAddFilterAction')
+                text: qsTr('Add an effect to the selected clip') + application.actionFirstShortcut('filtersAddFilterAction')
             }
         }
 
         Shotcut.Button {
             id: removeButton
 
-            implicitWidth: height
+            text: qsTr("Remove")
             icon.name: 'list-remove'
             icon.source: 'qrc:///icons/oxygen/32x32/actions/list-remove.png'
             enabled: selectedIndex > Shotcut.Filter.NoCurrentFilter
@@ -215,8 +236,15 @@ Rectangle {
             }
         }
 
-        // separator
+        Button {
+            id: moreControls
+            text: checked ? qsTr("Less") : qsTr("More")
+            checkable: true
+        }
+
+        // Advanced controls remain available when requested.
         Shotcut.Button {
+            visible: moreControls.checked
             enabled: false
             implicitWidth: 1
             implicitHeight: 20
@@ -224,6 +252,7 @@ Rectangle {
 
         Shotcut.Button {
             id: copyButton
+            visible: moreControls.checked
 
             implicitWidth: height
             icon.name: 'edit-copy'
@@ -239,6 +268,7 @@ Rectangle {
 
         Shotcut.Button {
             id: pasteButton
+            visible: moreControls.checked
 
             implicitWidth: height
             enabled: attachedfiltersmodel.isProducerSelected
@@ -254,6 +284,7 @@ Rectangle {
 
         Shotcut.Button {
             id: filterSetButton
+            visible: moreControls.checked
 
             implicitWidth: height
             icon.name: 'server-database'
@@ -267,8 +298,9 @@ Rectangle {
             }
         }
 
-        // separator
+        // Advanced controls remain available when requested.
         Shotcut.Button {
+            visible: moreControls.checked
             enabled: false
             implicitWidth: 1
             implicitHeight: 20
@@ -276,6 +308,7 @@ Rectangle {
 
         Shotcut.Button {
             id: moveUpButton
+            visible: moreControls.checked
 
             implicitWidth: height
             enabled: attachedFilters.selectedCanMoveUp
@@ -297,6 +330,7 @@ Rectangle {
 
         Shotcut.Button {
             id: moveDownButton
+            visible: moreControls.checked
 
             implicitWidth: height
             enabled: attachedFilters.selectedCanMoveDown
@@ -316,8 +350,9 @@ Rectangle {
             }
         }
 
-        // separator
+        // Advanced controls remain available when requested.
         Shotcut.Button {
+            visible: moreControls.checked
             enabled: false
             implicitWidth: 1
             implicitHeight: 20
@@ -325,6 +360,7 @@ Rectangle {
 
         Shotcut.Button {
             id: deselectButton
+            visible: moreControls.checked
 
             implicitWidth: height
             icon.name: 'window-close'
@@ -351,6 +387,7 @@ Rectangle {
     Flickable {
         // scroll bar
         id: filterConfigScrollView
+        visible: !root.textHome && !root.colorHome
 
         function expandWidth() {
             if (filterConfig.item)
@@ -411,6 +448,86 @@ Rectangle {
             right: parent.right
             bottom: parent.bottom
             topMargin: attachedContainer.anchors.topMargin
+        }
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        visible: root.textHome
+        color: activePalette.window
+        ColumnLayout {
+            anchors { top: parent.top; left: parent.left; right: parent.right; margins: 20 }
+            spacing: 16
+            Label { text: qsTr("Text"); font.pixelSize: 22; font.bold: true }
+            Label {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: qsTr("Add a text layer, then type your words and choose a style. Select a text clip in the timeline to edit it again.")
+            }
+            Button {
+                text: qsTr("+ Add text layer")
+                Layout.fillWidth: true
+                onClicked: application.triggerAction("cutItAddText")
+            }
+            Label {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: qsTr("Text stays on its own layer so you can move it, trim it, or delete it like a clip.")
+                opacity: 0.65
+            }
+        }
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        visible: root.colorHome
+        color: activePalette.window
+        ScrollView {
+            anchors.fill: parent
+            anchors.margins: 16
+            contentWidth: availableWidth
+            ColumnLayout {
+                width: parent.width
+                spacing: 12
+                Label { text: qsTr("Color"); font.pixelSize: 22; font.bold: true }
+                Label {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    text: attachedfiltersmodel.isProducerSelected
+                          ? qsTr("Choose an adjustment. Changes apply to the selected clip.")
+                          : qsTr("Select a timeline clip to adjust its color.")
+                }
+                Repeater {
+                    model: [
+                        {title: qsTr("Brightness"), detail: qsTr("Make the picture lighter or darker"), folder: "brightness"},
+                        {title: qsTr("Contrast"), detail: qsTr("Adjust the difference between light and dark"), folder: "contrast"},
+                        {title: qsTr("Saturation"), detail: qsTr("Control how vivid the colors look"), folder: "saturation"},
+                        {title: qsTr("White balance"), detail: qsTr("Correct warm or cool lighting"), folder: "white"}
+                    ]
+                    Button {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        implicitHeight: 54
+                        enabled: attachedfiltersmodel.isProducerSelected
+                        text: modelData.title + "\n" + modelData.detail
+                        onClicked: {
+                            if (cutItTools.openQuickFilter(modelData.folder)) root.showColorHome = false;
+                        }
+                    }
+                }
+                Button {
+                    text: qsTr("Advanced color tools...")
+                    Layout.fillWidth: true
+                    enabled: attachedfiltersmodel.isProducerSelected
+                    onClicked: { root.showColorHome = false; filterMenu.open(); }
+                }
+                Label {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    opacity: 0.65
+                    text: qsTr("Use Adjustments to return here. Existing adjustments reopen without adding duplicates.")
+                }
+            }
         }
     }
 

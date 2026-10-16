@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2025 Meltytech, LLC
+ * Copyright (c) 2014-2026 Meltytech, LLC
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,8 @@ Rectangle {
 
     function open() {
         filterWindow.visible = true;
+        searchField.text = metadatamodel.search;
+        syncCategory();
         searchField.focus = true;
     }
 
@@ -37,13 +39,19 @@ Rectangle {
     }
 
     visible: false
-    onVisibleChanged: {
+    onVisibleChanged: syncCategory()
+
+    function syncCategory() {
         switch (metadatamodel.filter) {
         case Shotcut.MetadataModel.FavoritesFilter:
             favButton.checked = true;
             break;
         case Shotcut.MetadataModel.VideoFilter:
             vidButton.checked = true;
+            if (metadatamodel.search === '' || metadatamodel.search === 'text') {
+                vidButton.text = qsTr('Video');
+                vidButton.videoFilterType = 'video';
+            }
             if (metadatamodel.search === '#color') {
                 vidButton.text = colorMenuItem.text;
                 vidButton.videoFilterType = 'color';
@@ -83,7 +91,7 @@ Rectangle {
 
                 Layout.fillWidth: true
                 focus: true
-                placeholderText: qsTr("search")
+                placeholderText: qsTr("Search effects...")
                 selectByMouse: true
                 onTextChanged: {
                     if (length !== 1 && text !== metadatamodel.search)
@@ -91,7 +99,7 @@ Rectangle {
                     if (length > 0) {
                         parent.savedFilter = typeGroup.checkedButton;
                         favButton.checked = vidButton.checked = audButton.checked = false;
-                    } else {
+                    } else if (parent.savedFilter) {
                         parent.savedFilter.checked = true;
                     }
                 }
@@ -431,8 +439,10 @@ Rectangle {
                 color: parent.palette.alternateBase
             }
 
-            ListView {
+            GridView {
                 id: menuListView
+                cellWidth: Math.max(120, width / Math.max(1, Math.floor(width / 150)))
+                cellHeight: 116
 
                 function itemSelected(index) {
                     if (index > -1) {
@@ -482,10 +492,7 @@ Rectangle {
                 Layout.preferredWidth: parent.Layout.preferredHeight * sourceSize.width / sourceSize.height
                 Layout.preferredHeight: parent.Layout.preferredHeight
                 fillMode: Image.PreserveAspectFit
-                onPlayingChanged: {
-                    if (!playing)
-                        playing = true;
-                }
+                playing: filterWindow.visible
             }
 
             Label {

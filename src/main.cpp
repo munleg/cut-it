@@ -189,7 +189,7 @@ public:
         dir.cd("qt6");
 #endif
         addLibraryPath(dir.absolutePath());
-        setOrganizationName("Meltytech");
+        setOrganizationName("CutIt");
 #if defined(Q_OS_UNIX) && !defined(Q_OS_MAC)
         setOrganizationDomain("shotcut.org");
         setDesktopFileName("org.shotcut.Shotcut");
@@ -197,6 +197,7 @@ public:
         setOrganizationDomain("meltytech.com");
 #endif
         setApplicationName("Shotcut");
+        setApplicationDisplayName("Cut-it 0.1 Beta");
         setApplicationVersion(SHOTCUT_VERSION);
 
         // Process command line options.
@@ -546,7 +547,7 @@ int main(int argc, char **argv)
     ::qputenv(kWatchdogEnvVar, "1");
 #endif
     if (::qEnvironmentVariableIsSet(kWatchdogEnvVar)) {
-        QSplashScreen splash(QPixmap(":/icons/shotcut-logo-320x320.png"));
+
 
         // Log some basic info.
         LOG_INFO() << "Starting Shotcut version" << SHOTCUT_VERSION;
@@ -592,7 +593,7 @@ int main(int argc, char **argv)
         }
         Settings.log();
 
-        splash.show();
+
         a.processEvents();
 
         // Expire old items from the qmlcache
@@ -632,7 +633,7 @@ int main(int argc, char **argv)
         a.mainWindow->show();
         a.processEvents();
         a.mainWindow->setFullScreen(a.isFullScreen);
-        splash.finish(a.mainWindow);
+
 
         // Set up a local IPC server so the watchdog parent can forward
         // QFileOpenEvent file paths (e.g. files opened from Finder on macOS)

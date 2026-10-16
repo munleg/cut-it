@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2025 Meltytech, LLC
+ * Copyright (c) 2018-2026 Meltytech, LLC
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,6 +52,7 @@ TextProducerWidget::TextProducerWidget(QWidget *parent)
     , ui(new Ui::TextProducerWidget)
 {
     ui->setupUi(this);
+    ui->plainTextEdit->setPlainText(tr("Your text"));
     ui->colorLabel->setText(kTransparent);
     Util::setColorsToHighlight(ui->label_2);
     ui->preset->saveDefaultPreset(getPreset());
@@ -95,6 +96,7 @@ Mlt::Producer *TextProducerWidget::newProducer(Mlt::Profile &profile)
     Mlt::Producer *p = new Mlt::Producer(profile, "color:");
     p->set("resource", colorStringToResource(ui->colorLabel->text()).toLatin1().constData());
     p->set("mlt_image_format", "rgba");
+    p->set("cutit:text", 1);
     MLT.setDurationFromDefault(p);
     p->set(kShotcutCaptionProperty, ui->colorLabel->text().toLatin1().constData());
     p->set(kShotcutDetailProperty, ui->colorLabel->text().toLatin1().constData());
@@ -232,12 +234,12 @@ Mlt::Filter *TextProducerWidget::createFilter(Mlt::Profile &profile, Mlt::Produc
         fgcolor = "#ff00ff00";
     } else {
 #if defined(Q_OS_WIN)
-        filter->set("family", "Verdana");
+        filter->set("family", "Noto Sans");
 #elif defined(Q_OS_MAC)
         filter->set("family", "Helvetica");
 #endif
-        filter->set("outline", 3);
-        filter->set("weight", QFont::Bold);
+        filter->set("outline", 0);
+        filter->set("weight", QFont::Normal);
     }
     filter->set("fgcolour", fgcolor);
     filter->set("bgcolour", "#00000000");
@@ -249,12 +251,12 @@ Mlt::Filter *TextProducerWidget::createFilter(Mlt::Profile &profile, Mlt::Produc
     filter->set("size", QFontInfo(font).pixelSize());
     filter->set("geometry",
                 QStringLiteral("0 %1 %2 %3 1")
-                    .arg(qRound(0.75 * profile.height()))
+                    .arg(qRound(0.05 * profile.height()))
                     .arg(profile.width())
-                    .arg(profile.height() * 0.25)
+                    .arg(profile.height() * 0.90)
                     .toUtf8()
                     .constData());
-    filter->set("valign", "top");
+    filter->set("valign", "middle");
     filter->set("halign", "center");
     filter->set_in_and_out(p->get_in(), p->get_out());
     return filter;

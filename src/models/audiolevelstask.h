@@ -23,6 +23,7 @@
 #include <QList>
 #include <QPersistentModelIndex>
 #include <QRunnable>
+#include <atomic>
 
 class AudioLevelsTask : public QRunnable
 {
@@ -49,7 +50,7 @@ private:
     typedef QPair<Mlt::Producer *, QPersistentModelIndex> ProducerAndIndex;
     QList<ProducerAndIndex> m_producers;
     QScopedPointer<Mlt::Producer> m_tempProducer;
-    bool m_isCanceled;
+    std::atomic_bool m_isCanceled;
     bool m_isForce;
     Mlt::Profile m_profile;
 };

@@ -16,6 +16,7 @@
  */
 
 #include "audiolevelstask.h"
+#include "backgroundpreviewwork.h"
 
 #include "Logger.h"
 #include "database.h"
@@ -201,6 +202,7 @@ void AudioLevelsTask::run()
         updateTime.start();
         // TODO: use project channel count
         int channels = 2;
+        bool firstUpdate = true;
 
         auto message = QStringLiteral("%1 %2").arg(QObject::tr("generating audio waveforms for"),
                                                    Util::baseName(tempProducer()->get("resource"),
@@ -214,6 +216,10 @@ void AudioLevelsTask::run()
         // for each frame
         int n = tempProducer()->get_playtime();
         for (int i = 0; i < n && !m_isCanceled; i++) {
+            if (!BackgroundPreviewWork::instance().waitUntilIdle()) {
+                m_isCanceled = true;
+                break;
+            }
             Mlt::Frame *frame = tempProducer()->get_frame();
             if (frame && frame->is_valid() && !frame->get_int("test_audio")) {
                 mlt_audio_format format = mlt_audio_s16;
@@ -235,8 +241,9 @@ void AudioLevelsTask::run()
             }
             delete frame;
 
-            // Incrementally update the audio levels every 3 seconds.
-            if (updateTime.elapsed() > 3 * 1000 && !m_isCanceled) {
+            // Show the first decoded section promptly, then throttle copying and repainting.
+            if (updateTime.elapsed() > (firstUpdate ? 250 : 1000) && !m_isCanceled) {
+                firstUpdate = false;
                 updateTime.restart();
                 foreach (ProducerAndIndex p, m_producers) {
                     QByteArray *levelsCopy = new QByteArray(levels);

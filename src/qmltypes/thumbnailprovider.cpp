@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2023 Meltytech, LLC
+ * Copyright (c) 2013-2026 Meltytech, LLC
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
  */
 
 #include "thumbnailprovider.h"
+#include "backgroundpreviewwork.h"
 
 #include "Logger.h"
 #include "database.h"
@@ -26,6 +27,14 @@
 
 #include <QCryptographicHash>
 #include <QQuickImageProvider>
+#include <atomic>
+
+static std::atomic_bool stoppingThumbnails{false};
+
+void ThumbnailProvider::stopRequests()
+{
+    stoppingThumbnails.store(true);
+}
 
 ThumbnailProvider::ThumbnailProvider()
     : QQuickImageProvider(QQmlImageProviderBase::Image,
@@ -35,7 +44,13 @@ ThumbnailProvider::ThumbnailProvider()
 
 QImage ThumbnailProvider::requestImage(const QString &id, QSize *size, const QSize &requestedSize)
 {
+    QMutexLocker requestLock(&m_requestMutex);
     QImage result;
+    if (stoppingThumbnails.load()) {
+        if (size)
+            *size = QSize();
+        return result;
+    }
 
     // id is [hash]/mlt_service/resource#frameNumber[!]
     // optional trailing '!' means to force update
@@ -61,23 +76,37 @@ QImage ThumbnailProvider::requestImage(const QString &id, QSize *size, const QSi
 
         QString key = cacheKey(properties, service, resource, hash, frameNumber);
         result = DB.getThumbnail(key);
-        if (force || result.isNull()) {
+        if (!stoppingThumbnails.load() && (force || result.isNull())) {
             if (service == "avformat-novalidate")
                 service = "avformat";
             else if (service.startsWith("xml"))
                 service = "xml-nogl";
-            Mlt::Producer producer;
-            if (service == "count") {
-                producer = Mlt::Producer(m_profile, service.toUtf8().constData(), "loader-nogl");
-            } else if (!Settings.playerGPU() || (service != "xml-nogl" && service != "consumer")) {
-                producer = Mlt::Producer(m_profile,
-                                         service.toUtf8().constData(),
-                                         resource.toUtf8().constData());
+            // Cache hits remain available during playback. Only new decoding waits.
+            if (!BackgroundPreviewWork::instance().waitUntilIdle())
+                return QImage();
+            const QString decoderKey = service + QLatin1Char('\n') + resource
+                                       + QLatin1Char('\n') + hash;
+            const bool reusable = service.startsWith("avformat");
+            if (!reusable || force || !m_decoder || m_decoderKey != decoderKey) {
+                m_decoder.reset();
+                m_decoderKey = decoderKey;
+                if (service == "count") {
+                    m_decoder.reset(new Mlt::Producer(m_profile, service.toUtf8().constData(), "loader-nogl"));
+                } else if (!Settings.playerGPU() || (service != "xml-nogl" && service != "consumer")) {
+                    m_decoder.reset(new Mlt::Producer(m_profile, service.toUtf8().constData(), resource.toUtf8().constData()));
+                }
+                if (m_decoder && m_decoder->is_valid()) {
+                    m_decoder->set("audio_index", -1);
+                    LOG_DEBUG() << "Cut-it thumbnail decoder opened";
+                }
             }
-            if (producer.is_valid()) {
-                result = makeThumbnail(producer, frameNumber, requestedSize);
-                DB.putThumbnail(key, result);
+            if (m_decoder && m_decoder->is_valid() && !stoppingThumbnails.load()) {
+                result = makeThumbnail(*m_decoder, frameNumber, requestedSize);
+                if (!stoppingThumbnails.load())
+                    DB.putThumbnail(key, result);
             }
+            if (!reusable)
+                m_decoder.reset();
         }
     }
     if (result.isNull()) {
@@ -126,8 +155,11 @@ QImage ThumbnailProvider::makeThumbnail(Mlt::Producer &producer,
         height = requestedSize.height();
     }
 
-    producer.attach(scaler);
-    producer.attach(padder);
-    producer.attach(converter);
+    if (!producer.get_int("_cutit:thumbnailFilters")) {
+        producer.attach(scaler);
+        producer.attach(padder);
+        producer.attach(converter);
+        producer.set("_cutit:thumbnailFilters", 1);
+    }
     return MLT.image(producer, frameNumber, width, height);
 }

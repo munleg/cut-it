@@ -24,6 +24,7 @@
 #include "docks/playlistdock.h"
 #include "mainwindow.h"
 #include "mixtransitionorder.h"
+#include "splitwaveformcache.h"
 #include "mltcontroller.h"
 #include "proxymanager.h"
 #include "qmltypes/qmlmetadata.h"
@@ -1925,6 +1926,7 @@ void MultitrackModel::splitClip(int trackIndex, int clipIndex, int position)
         int filterOut = MLT.filterOut(playlist, clipIndex);
         int duration = position - playlist.clip_start(clipIndex);
         int delta = info->frame_count - duration;
+        bool reusedWaveform = false;
 
         if (playlist.is_blank(clipIndex)) {
             beginInsertRows(index(trackIndex), clipIndex, clipIndex);
@@ -1937,6 +1939,7 @@ void MultitrackModel::splitClip(int trackIndex, int clipIndex, int position)
                                    "xml-string",
                                    MLT.XML(info->producer).toUtf8().constData());
             MLT.setUuid(producer, QUuid::createUuid());
+            reusedWaveform = copySplitWaveform(*info->producer, producer);
 
             // Connect a transition on the left to the new producer.
             if (isTransition(playlist, clipIndex - 1) && !playlist.is_blank(clipIndex)) {
@@ -1973,7 +1976,8 @@ void MultitrackModel::splitClip(int trackIndex, int clipIndex, int position)
             playlist.insert(producer, clipIndex, in, in + duration - 1);
             endInsertRows();
             QModelIndex modelIndex = createIndex(clipIndex, 0, trackIndex);
-            AudioLevelsTask::start(producer.parent(), this, modelIndex);
+            if (!reusedWaveform)
+                AudioLevelsTask::start(producer.parent(), this, modelIndex);
             MLT.adjustClipFilters(producer, filterIn, filterOut, 0, delta, 0);
         }
 
@@ -1989,7 +1993,8 @@ void MultitrackModel::splitClip(int trackIndex, int clipIndex, int position)
         emit dataChanged(modelIndex, modelIndex, roles);
 
         if (!playlist.is_blank(clipIndex + 1)) {
-            AudioLevelsTask::start(*info->producer, this, modelIndex);
+            if (!reusedWaveform)
+                AudioLevelsTask::start(*info->producer, this, modelIndex);
             // Use filterIn, not in, to keep filter in/out consistent when clipIndex follows a transition.
             MLT.adjustClipFilters(*info->producer, filterIn, filterOut, duration, 0, duration);
         }

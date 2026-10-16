@@ -16,6 +16,13 @@
  */
 
 #include "mainwindow.h"
+#include "qmltypes/cutitfonts.h"
+#include "backgroundpreviewwork.h"
+#include "qmltypes/thumbnailprovider.h"
+#include <QElapsedTimer>
+#ifdef Q_OS_WIN
+#include <qt_windows.h>
+#endif
 #include "ui_mainwindow.h"
 
 #include "Logger.h"
@@ -60,6 +67,7 @@
 #include "player.h"
 #include "proxymanager.h"
 #include "qmltypes/qmlapplication.h"
+#include "qmltypes/qmlmetadata.h"
 #include "qmltypes/qmlprofile.h"
 #include "qmltypes/qmlutilities.h"
 #include "screencapture/screencapture.h"
@@ -246,6 +254,7 @@ MainWindow::MainWindow()
     readWindowSettings();
     setupActions();
     setupLayoutSwitcher();
+    setupCutItWorkspace();
 
     setFocus();
     setCurrentFile("");
@@ -312,7 +321,8 @@ void MainWindow::setupAndConnectUndoStack()
     redoAction->setIconText(tr("Redo"));
     undoAction->setShortcut(QString::fromLatin1("Ctrl+Z"));
 #ifdef Q_OS_WIN
-    redoAction->setShortcut(QString::fromLatin1("Ctrl+Y"));
+    redoAction->setShortcuts({QKeySequence(QStringLiteral("Ctrl+Shift+Z")),
+                              QKeySequence(QStringLiteral("Ctrl+Y"))});
 #else
     redoAction->setShortcut(QString::fromLatin1("Ctrl+Shift+Z"));
 #endif
@@ -478,7 +488,11 @@ void MainWindow::setupAndConnectDocks()
             SIGNAL(triggered(bool)),
             this,
             SLOT(onPlaylistDockTriggered(bool)));
-    connect(ui->actionPlaylist, SIGNAL(triggered()), this, SLOT(onPlaylistDockTriggered()));
+    connect(ui->actionPlaylist, &QAction::triggered, this, [this]() {
+        m_playlistDock->show();
+        m_playlistDock->raise();
+        Actions["playlistAddFilesAction"]->trigger();
+    });
     connect(m_playlistDock,
             SIGNAL(clipOpened(Mlt::Producer *, bool)),
             this,
@@ -565,9 +579,19 @@ void MainWindow::setupAndConnectDocks()
     connect(m_timelineDock, SIGNAL(clipOpened(Mlt::Producer *)), SLOT(openCut(Mlt::Producer *)));
     connect(m_timelineDock->model(), &MultitrackModel::seeked, this, &MainWindow::seekTimeline);
     connect(m_timelineDock->markersModel(), SIGNAL(modified()), SLOT(onMultitrackModified()));
-    connect(m_timelineDock,
-            SIGNAL(selected(Mlt::Producer *)),
-            SLOT(loadProducerWidget(Mlt::Producer *)));
+    connect(m_timelineDock, &TimelineDock::selected, this, [this](Mlt::Producer *producer) {
+        if (property("cutItPropertiesVisible").toBool())
+            loadProducerWidget(producer);
+    });
+    connect(m_propertiesDock, &QDockWidget::visibilityChanged, this, [this](bool visible) {
+        setProperty("cutItPropertiesVisible", visible);
+        if (visible) {
+            if (m_player->tabIndex() == Player::ProjectTabIndex)
+                m_timelineDock->emitSelectedFromSelection();
+            else
+                loadProducerWidget(MLT.producer());
+        }
+    });
     connect(m_timelineDock, SIGNAL(clipCopied()), SLOT(onClipCopied()));
     connect(m_timelineDock, SIGNAL(filteredClicked()), SLOT(onFiltersDockTriggered()));
     connect(m_playlistDock,
@@ -678,6 +702,24 @@ void MainWindow::setupAndConnectDocks()
             SIGNAL(selected(Mlt::Producer *)),
             m_filterController,
             SLOT(setProducer(Mlt::Producer *)));
+    connect(m_timelineDock, &TimelineDock::selected, this, [this](Mlt::Producer *producer) {
+        if (!producer || !producer->get_int("cutit:text"))
+            return;
+        auto attached = m_filterController->attachedModel();
+        for (int i = 0; i < attached->rowCount(); ++i) {
+            const auto meta = attached->getMetadata(i);
+            if (meta && meta->objectName() == QStringLiteral("dynamicText")) {
+                m_playlistDock->hide();
+                m_filtersDock->setWindowTitle(tr("Text"));
+                m_filtersDock->setWorkspaceMode(3);
+                m_filtersDock->show();
+                m_filtersDock->raise();
+                resizeDocks({m_filtersDock}, {460}, Qt::Horizontal);
+                m_filterController->setCurrentFilter(i);
+                break;
+            }
+        }
+    });
     connect(m_player, SIGNAL(seeked(int)), m_filtersDock, SLOT(onSeeked(int)), Qt::QueuedConnection);
     connect(m_filtersDock, SIGNAL(seeked(int)), SLOT(seekKeyframes(int)));
     connect(MLT.videoWidget(),
@@ -2510,9 +2552,13 @@ void MainWindow::openVideo()
     if (filenames.length() > 0) {
         Settings.setOpenPath(QFileInfo(filenames.first()).path());
         activateWindow();
-        if (filenames.length() > 1)
-            m_multipleFiles = filenames;
-        open(filenames.first(), nullptr, true, filenames.length() > 1);
+        if (filenames.size() == 1 && filenames.first().endsWith(".mlt", Qt::CaseInsensitive)) {
+            open(filenames.first());
+        } else {
+            m_playlistDock->importFiles(filenames);
+            m_playlistDock->show();
+            m_playlistDock->raise();
+        }
     } else {
         // If file invalid, then on some platforms the dialog messes up SDL.
         MLT.onWindowResize();
@@ -2751,6 +2797,202 @@ void MainWindow::readWindowSettings()
         restoreState(kLayoutEditingDefault);
     }
     LOG_DEBUG() << "end";
+}
+
+void MainWindow::setupCutItWorkspace()
+{
+    if (auto video = qobject_cast<Mlt::VideoWidget *>(MLT.videoWidget())) {
+        connect(video, &Mlt::VideoWidget::playing, this, []() {
+            BackgroundPreviewWork::instance().setPlaying(true);
+        });
+        connect(video, &Mlt::VideoWidget::paused, this, []() {
+            BackgroundPreviewWork::instance().setPlaying(false);
+        });
+        // Opt-in local diagnostics; no per-frame logging in normal use.
+        if (qEnvironmentVariableIsSet("CUTIT_PLAYBACK_DIAGNOSTICS")) {
+            struct PlaybackProbe {
+                QElapsedTimer clock;
+                qint64 previousMs = -1;
+                qint64 maxGap = 0;
+                int frames = 0;
+            };
+            auto probe = std::make_shared<PlaybackProbe>();
+            connect(video, &Mlt::VideoWidget::playing, this, [probe]() {
+                probe->clock.start();
+                probe->previousMs = -1;
+                probe->maxGap = 0;
+                probe->frames = 0;
+            });
+            connect(video, &Mlt::VideoWidget::frameDisplayed, this, [probe](const SharedFrame &) {
+                if (!probe->clock.isValid())
+                    return;
+                const auto now = probe->clock.elapsed();
+                if (probe->previousMs >= 0)
+                    probe->maxGap = qMax(probe->maxGap, now - probe->previousMs);
+                probe->previousMs = now;
+                ++probe->frames;
+            });
+            connect(video, &Mlt::VideoWidget::paused, this, [probe]() {
+                if (probe->clock.isValid()) {
+                    LOG_INFO() << "Cut-it playback displayed frames:" << probe->frames
+                               << "elapsed ms:" << probe->clock.elapsed()
+                               << "maximum frame gap ms:" << probe->maxGap;
+                    probe->clock.invalidate();
+                }
+            });
+        }
+    }
+    setWindowIcon(QIcon());
+    setProperty("cutItCleanWorkspace", true);
+    const auto editActions = ui->menuEdit->actions();
+    for (auto action : ui->mainToolBar->actions()) {
+        if (action != ui->actionOpen && action != ui->actionSave
+            && action != ui->actionPlaylist && action != ui->actionEncode
+            && !editActions.contains(action))
+            ui->mainToolBar->removeAction(action);
+    }
+    ui->actionOpen->setText(tr("Import"));
+    ui->actionOpen->setIconText(tr("Import"));
+    ui->mainToolBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    ui->mainToolBar->setIconSize(QSize(18, 18));
+    ui->mainToolBar->setMinimumHeight(52);
+    if (auto switcher = findChild<QWidget *>(kLayoutSwitcherName))
+        switcher->hide();
+    QPalette palette = qApp->palette();
+    palette.setColor(QPalette::Window, QColor("#181818"));
+    palette.setColor(QPalette::Base, QColor("#111111"));
+    palette.setColor(QPalette::AlternateBase, QColor("#222222"));
+    palette.setColor(QPalette::Button, QColor("#282828"));
+    palette.setColor(QPalette::Highlight, QColor("#505050"));
+    palette.setColor(QPalette::WindowText, QColor("#eeeeee"));
+    palette.setColor(QPalette::Text, QColor("#eeeeee"));
+    palette.setColor(QPalette::ButtonText, QColor("#eeeeee"));
+    qApp->setPalette(palette);
+    setStyleSheet(QStringLiteral(
+        "QMainWindow::separator { background: #101010; width: 6px; height: 6px; }"
+        "QDockWidget::title { padding: 8px; background: #202020; }"
+        "QToolBar { border: none; spacing: 6px; padding: 5px; }"
+        "QToolButton { padding: 6px; border: none; border-radius: 5px; }"
+        "QToolButton:hover { background: #383838; }"
+        "QToolButton:checked { background: #505050; }"
+        "QTabBar::tab { padding: 7px 14px; border: none; }"
+        "QTabBar::tab:selected { background: #303030; color: #ffffff; }"));
+    ui->actionPlaylist->setText(tr("Media"));
+    m_playlistDock->setWindowTitle(tr("Media"));
+    auto tools = new QToolButton(ui->mainToolBar);
+    tools->setText(tr("Tools: Editing"));
+    tools->setAccessibleName(tr("Choose editing tools"));
+    tools->setPopupMode(QToolButton::InstantPopup);
+    auto menu = new QMenu(tools);
+    tools->setMenu(menu);
+    const QStringList modes{tr("Editing"), tr("Color Grading"), tr("Effects"),
+                            tr("Text"), tr("Audio")};
+    for (int mode = 0; mode < modes.size(); ++mode) {
+        auto action = menu->addAction(modes.at(mode));
+        Actions.add(QStringLiteral("cutItTool%1").arg(mode), action, tr("Cut-it"));
+        connect(action, &QAction::triggered, this, [this, tools, modes, mode]() {
+            tools->setText(tr("Tools: %1").arg(modes.at(mode)));
+            // Keep the same player, timeline and dock layout alive between tools.
+            m_timelineDock->show();
+            m_player->show();
+            if (mode == 0) {
+                m_filtersDock->hide();
+                m_playlistDock->show();
+                m_playlistDock->raise();
+                return;
+            }
+            auto model = m_filterController->metadataModel();
+            m_playlistDock->hide();
+            m_filtersDock->setWindowTitle(modes.at(mode));
+            m_filtersDock->setWorkspaceMode(mode);
+            model->setFilter(mode == 4 ? MetadataModel::AudioFilter : MetadataModel::VideoFilter);
+            model->setSearch(mode == 1 ? QStringLiteral("#color")
+                                      : mode == 3 ? QStringLiteral("text") : QString());
+            m_filtersDock->show();
+            m_filtersDock->raise();
+            if (mode == 3) {
+                auto attached = m_filterController->attachedModel();
+                for (int i = 0; i < attached->rowCount(); ++i) {
+                    const auto meta = attached->getMetadata(i);
+                    if (meta && meta->objectName() == QStringLiteral("dynamicText")) {
+                        m_filterController->setCurrentFilter(i);
+                        break;
+                    }
+                }
+            }
+            showStatusMessage(tr("Select a timeline clip to add or adjust its tools."));
+        });
+    }
+    const auto toolbarActions = ui->mainToolBar->actions();
+    menu->addSeparator();
+    auto keybinds = menu->addAction(tr("Customize shortcuts…"));
+    connect(keybinds, &QAction::triggered, this, &MainWindow::on_actionKeyboardShortcuts_triggered);
+    const int mediaIndex = toolbarActions.indexOf(ui->actionPlaylist);
+    ui->mainToolBar->insertWidget(toolbarActions.value(mediaIndex + 1), tools);
+    auto addText = new QAction(tr("Add text"), this);
+    addText->setShortcut(QKeySequence(QStringLiteral("Ctrl+Alt+T")));
+    connect(addText, &QAction::triggered, this, [this]() { m_timelineDock->addCutItLayer(1); });
+    Actions.add("cutItAddText", addText, tr("Cut-it"));
+    if (!Settings.shortcuts(QStringLiteral("cutItAddText")).isEmpty())
+        addText->setShortcuts(Settings.shortcuts(QStringLiteral("cutItAddText")));
+    addAction(addText);
+    ui->mainToolBar->insertAction(ui->actionEncode, addText);
+    auto toolbarSpacer = new QWidget(ui->mainToolBar);
+    toolbarSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    ui->mainToolBar->insertWidget(ui->actionEncode, toolbarSpacer);
+    auto playback = new QToolButton(ui->mainToolBar);
+    playback->setText(tr("Playback"));
+    playback->setAccessibleName(tr("Playback performance"));
+    playback->setToolTip(tr("Adjust preview resolution and proxy media for smoother editing."));
+    playback->setPopupMode(QToolButton::InstantPopup);
+    auto playbackMenu = new QMenu(playback);
+    playback->setMenu(playbackMenu);
+    auto previewMenu = playbackMenu->addMenu(tr("Preview resolution"));
+    // Share the original actions so enabled/checked states and compatibility
+    // restrictions remain synchronized with Settings, including project changes.
+    previewMenu->addAction(ui->actionPreview360);
+    previewMenu->addAction(ui->actionPreview540);
+    previewMenu->addAction(ui->actionPreview720);
+    previewMenu->addAction(ui->actionPreview1080);
+    previewMenu->addAction(ui->actionPreviewNone);
+    playbackMenu->addSeparator();
+    playbackMenu->addAction(ui->actionUseProxy);
+    playbackMenu->addAction(ui->actionPreviewHardwareDecoder);
+    // Preview quality belongs in the player menu, not the main editing toolbar.
+    ui->menuPlayer->addMenu(playbackMenu);
+    playbackMenu->setTitle(tr("Preview quality"));
+    playback->hide();
+    tools->setStyleSheet(QStringLiteral(
+        "QToolButton { padding: 7px 12px; border-radius: 6px; }"
+        "QToolButton:hover { background-color: palette(highlight); }"));
+    m_timelineDock->show();
+    m_playlistDock->show();
+    m_playlistDock->raise();
+    QSettings workspaceSettings(QDir(Settings.appDataLocation()).filePath("cutit-workspace.ini"),
+                                QSettings::IniFormat);
+    if (workspaceSettings.value("cutit/timelineStyleVersion", 0).toInt() < 2) {
+        Settings.setTimelineTrackHeight(30);
+        m_timelineDock->model()->setTrackHeight(30);
+        workspaceSettings.setValue("cutit/timelineStyleVersion", 2);
+    }
+    if (workspaceSettings.value("cutit/workspaceVersion", 0).toInt() < 5) {
+        m_timelineDock->model()->setTrackHeight(30);
+        for (auto dock : findChildren<QDockWidget *>(QString(), Qt::FindDirectChildrenOnly))
+            dock->hide();
+        removeDockWidget(m_playlistDock);
+        removeDockWidget(m_timelineDock);
+        addDockWidget(Qt::LeftDockWidgetArea, m_playlistDock);
+        addDockWidget(Qt::BottomDockWidgetArea, m_timelineDock);
+        setCorner(Qt::BottomLeftCorner, Qt::BottomDockWidgetArea);
+        setCorner(Qt::BottomRightCorner, Qt::BottomDockWidgetArea);
+        m_playlistDock->show();
+        m_timelineDock->show();
+        QTimer::singleShot(0, this, [this]() {
+            resizeDocks({m_playlistDock}, {300}, Qt::Horizontal);
+            resizeDocks({m_timelineDock}, {qMax(180, height() / 5)}, Qt::Vertical);
+        });
+        workspaceSettings.setValue("cutit/workspaceVersion", 5);
+    }
 }
 
 void MainWindow::setupActions()
@@ -3094,7 +3336,7 @@ void MainWindow::updateWindowTitle()
     setWindowTitle(QStringLiteral("%1[*] - %2 - %3")
                        .arg(shownName)
                        .arg(profileText)
-                       .arg(qApp->applicationName()));
+                       .arg(QStringLiteral("Cut-it 0.1 Beta - Hybrid Timeline")));
 #endif
 }
 
@@ -3109,7 +3351,8 @@ void MainWindow::on_actionAbout_Shotcut_triggered()
         this,
         tr("About %1").arg(qApp->applicationName()),
         QStringLiteral(
-            "<h1>Shotcut version %2</h1>"
+            "<h1>Cut-it 0.1 Beta</h1>"
+            "<p>Based on Shotcut %2. Cut-it is an independent GPL desktop editor.</p>"
             "<p><a href=\"%3\">%1</a> is a free, open source, cross platform video editor.</p>"
             "<small><p>%4</p>"
             "<p>Licensed under the %5</p>"
@@ -3451,6 +3694,15 @@ void MainWindow::closeEvent(QCloseEvent *event)
     m_timelineDock->stopRecording();
     if (continueJobsRunning() && continueModified()) {
         LOG_DEBUG() << "begin";
+        QElapsedTimer shutdownTimer;
+        shutdownTimer.start();
+        // Cancel before clear(): clear deletes queued QRunnables, whose pointers
+        // are still registered with AudioLevelsTask until closeAll removes them.
+        BackgroundPreviewWork::instance().stop();
+        ThumbnailProvider::stopRequests();
+        AudioLevelsTask::closeAll();
+        QThreadPool::globalInstance()->clear();
+        LOG_INFO() << "Cut-it shutdown background cancellation ms:" << shutdownTimer.elapsed();
         JOBS.cleanup();
         if (m_exitCode != EXIT_RESET) {
             writeSettings();
@@ -3465,13 +3717,20 @@ void MainWindow::closeEvent(QCloseEvent *event)
             else
                 onMultitrackClosed();
         }
-        QThreadPool::globalInstance()->clear();
-        AudioLevelsTask::closeAll();
+        LOG_INFO() << "Cut-it shutdown cleanup ms:" << shutdownTimer.elapsed();
         event->accept();
         emit aboutToShutDown();
+        CutItFonts::releaseAll();
         if (m_exitCode == EXIT_SUCCESS) {
             QApplication::quit();
             LOG_DEBUG() << "end";
+#ifdef Q_OS_WIN
+            // _Exit enters ExitProcess DLL detach on Windows. A decoder DLL
+            // can deadlock there after worker threads are stopped by the OS.
+            // All save prompts, settings sync, job cleanup and player stop
+            // have completed above; finish this process without DLL detach.
+            ::TerminateProcess(::GetCurrentProcess(), 0);
+#endif
             ::_Exit(0);
         } else {
             QApplication::exit(m_exitCode);
@@ -6401,6 +6660,15 @@ void MainWindow::onSceneGraphInitialized()
 
 void MainWindow::adjustMainToolbar()
 {
+    if (property("cutItCleanWorkspace").toBool()) {
+        ui->mainToolBar->removeAction(ui->actionFiles);
+        ui->mainToolBar->removeAction(ui->actionMarkers);
+        ui->mainToolBar->removeAction(ui->actionNotes);
+        ui->mainToolBar->removeAction(ui->actionHistory);
+        ui->mainToolBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        ui->mainToolBar->setIconSize(QSize(18, 18));
+        return;
+    }
     if (Settings.textUnderIcons() && this->width() < 1590) {
         ui->mainToolBar->removeAction(ui->actionFiles);
         ui->mainToolBar->removeAction(ui->actionMarkers);
@@ -6752,6 +7020,8 @@ void MainWindow::on_actionProxyConfigureHardware_triggered()
 
 void MainWindow::updateLayoutSwitcher()
 {
+    if (property("cutItCleanWorkspace").toBool())
+        return;
     if (Settings.textUnderIcons() && !Settings.smallIcons()) {
         auto layoutSwitcher = findChild<QWidget *>(kLayoutSwitcherName);
         if (layoutSwitcher) {

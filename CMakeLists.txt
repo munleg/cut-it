@@ -137,3 +137,5 @@ if(BUILD_DOCS)
     VERBATIM
   )
 endif()
+
+install(DIRECTORY fonts/ DESTINATION share/shotcut/fonts)

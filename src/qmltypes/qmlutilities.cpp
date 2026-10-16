@@ -27,6 +27,7 @@
 #include "qmltypes/fontdialog.h"
 #include "qmltypes/messagedialog.h"
 #include "qmltypes/qmlapplication.h"
+#include "qmltypes/cutitfonts.h"
 #include "qmltypes/qmleditmenu.h"
 #include "qmltypes/qmlextension.h"
 #include "qmltypes/qmlfile.h"
@@ -89,6 +90,9 @@ void QmlUtilities::registerCommonTypes()
 
 void QmlUtilities::setCommonProperties(QQmlContext *context)
 {
+    static CutItFonts fonts(QDir(Settings.appDataLocation()).filePath("fonts"),
+                            QDir(qmlDir().absolutePath()).filePath("../fonts"));
+    context->setContextProperty("cutItFonts", &fonts);
     context->setContextProperty("settings", &ShotcutSettings::singleton());
     context->setContextProperty("application", &QmlApplication::singleton());
     context->setContextProperty("profile", &QmlProfile::singleton());

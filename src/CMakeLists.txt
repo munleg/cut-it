@@ -121,6 +121,7 @@ add_executable(shotcut WIN32 MACOSX_BUNDLE
   qmltypes/fontdialog.h qmltypes/fontdialog.cpp
   qmltypes/messagedialog.h qmltypes/messagedialog.cpp
   qmltypes/qmlapplication.cpp qmltypes/qmlapplication.h
+  qmltypes/cutitfonts.cpp qmltypes/cutitfonts.h
   qmltypes/qmleditmenu.cpp qmltypes/qmleditmenu.h
   qmltypes/qmlextension.cpp qmltypes/qmlextension.h
   qmltypes/qmlfile.cpp qmltypes/qmlfile.h
@@ -348,7 +349,7 @@ if(WIN32)
   target_sources(shotcut PRIVATE windowstools.cpp windowstools.h)
   target_sources(shotcut PRIVATE widgets/d3dvideowidget.h widgets/d3dvideowidget.cpp)
   target_sources(shotcut PRIVATE widgets/openglvideowidget.h widgets/openglvideowidget.cpp)
-  target_link_libraries(shotcut PRIVATE d3d11 d3dcompiler dxgi dxguid ole32)
+  target_link_libraries(shotcut PRIVATE d3d11 d3dcompiler dxgi dxguid ole32 gdi32)
 
   # Runtime exception handler for debug only
   if(CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64")

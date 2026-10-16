@@ -398,6 +398,55 @@ TimelineDock::TimelineDock(QWidget *parent)
     toolbar->addAction(Actions["timelineZoomFitAction"]);
     toolbar->addSeparator();
     toolbar->addAction(Actions["timelineRecordAudioAction"]);
+    // Keep frequent edits visible. Advanced operations retain their menu
+    // entries and keyboard shortcuts without filling the timeline toolbar.
+    for (const auto &key : {"timelineAppendAction", "timelineLiftAction",
+                           "timelineOverwriteAction", "timelineMarkerAction",
+                           "timelinePrevMarkerAction", "timelineNextMarkerAction",
+                           "timelineScrubDragAction", "timelineRippleAllTracksAction",
+                           "timelineRippleMarkersAction", "timelineRecordAudioAction",
+                           "timelineCutAction", "timelineCopyAction", "timelinePasteAction",
+                           "timelineDeleteAction", "timelineRippleAction"})
+        toolbar->removeAction(Actions[key]);
+    toolbar->insertAction(Actions["timelineSplitAction"], Actions["timelineDeleteAction"]);
+    Actions["timelineDeleteAction"]->setIconText(tr("Delete"));
+    Actions["timelineSplitAction"]->setIconText(tr("Split"));
+    Actions["timelineSnapAction"]->setIconText(tr("Snap"));
+    for (auto action : toolbar->actions()) {
+        if (action->isSeparator())
+            toolbar->removeAction(action);
+    }
+    for (const auto &key : {"timelineDeleteAction", "timelineSplitAction", "timelineSnapAction"}) {
+        if (auto button = qobject_cast<QToolButton *>(toolbar->widgetForAction(Actions[key]))) {
+            button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+            button->setStyleSheet(QStringLiteral("QToolButton { min-width: 70px; width: 70px; padding: 2px 8px; }"));
+        }
+    }
+    auto detailsAction = new QAction(tr("Details"), this);
+    detailsAction->setCheckable(true);
+    detailsAction->setToolTip(tr("Expand tracks for larger thumbnails and waveforms"));
+    detailsAction->setChecked(m_model.trackHeight() > 32);
+    connect(detailsAction, &QAction::triggered, this, [this]() {
+        const bool expanded = m_model.trackHeight() <= 32;
+        // A restored/tabbed dock can otherwise clip the larger track while
+        // Qt is still negotiating its previous minimum size.
+        setMinimumHeight(expanded ? 240 : 180);
+        m_model.setTrackHeight(expanded ? 52 : 30);
+        QTimer::singleShot(0, this, [this]() {
+            MAIN.resizeDocks({this}, {m_model.trackHeight() > 32 ? 260 : 180}, Qt::Vertical);
+        });
+    });
+    const auto syncDetails = [this, detailsAction]() {
+        detailsAction->setChecked(m_model.trackHeight() > 32);
+    };
+    connect(&m_model, &MultitrackModel::trackHeightChanged, detailsAction, syncDetails);
+    connect(&m_model, &MultitrackModel::created, detailsAction, syncDetails);
+    connect(&m_model, &QAbstractItemModel::modelReset, detailsAction, syncDetails);
+    toolbar->addAction(detailsAction);
+    if (auto button = qobject_cast<QToolButton *>(toolbar->widgetForAction(detailsAction))) {
+        button->setToolButtonStyle(Qt::ToolButtonTextOnly);
+        button->setStyleSheet(QStringLiteral("QToolButton { min-width: 70px; width: 70px; padding: 2px 8px; }"));
+    }
     vboxLayout->setMenuBar(toolbar);
 
     qmlRegisterType<MultitrackModel>("Shotcut.Models", 1, 0, "MultitrackModel");
@@ -999,12 +1048,15 @@ void TimelineDock::setupActions()
     });
     Actions.add("timelineAppendAction", action);
 
-    action = new QAction(tr("Ripple Delete"), this);
+    action = new QAction(tr("Delete and close gap"), this);
     QList<QKeySequence> deleteShortcuts;
+    deleteShortcuts << QKeySequence(Qt::Key_Backspace);
+    deleteShortcuts << QKeySequence(Qt::Key_Delete);
     deleteShortcuts << QKeySequence(Qt::Key_X);
-    deleteShortcuts << QKeySequence(Qt::SHIFT | Qt::Key_Backspace);
-    deleteShortcuts << QKeySequence(Qt::SHIFT | Qt::Key_Delete);
     action->setShortcuts(deleteShortcuts);
+    action->setAutoRepeat(false);
+    action->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    addAction(action);
     icon = QIcon::fromTheme("list-remove", QIcon(":/icons/oxygen/32x32/actions/list-remove.png"));
     action->setIcon(icon);
     connect(action, &QAction::triggered, this, [&]() {
@@ -1016,13 +1068,15 @@ void TimelineDock::setupActions()
     });
     Actions.add("timelineDeleteAction", action);
 
-    action = new QAction(tr("Lift"), this);
-    action->setShortcut(QKeySequence(Qt::Key_Z));
+    action = new QAction(tr("Delete, keep gap"), this);
     QList<QKeySequence> liftShortcuts;
+    liftShortcuts << QKeySequence(Qt::SHIFT | Qt::Key_Backspace);
+    liftShortcuts << QKeySequence(Qt::SHIFT | Qt::Key_Delete);
     liftShortcuts << QKeySequence(Qt::Key_Z);
-    liftShortcuts << QKeySequence(Qt::Key_Backspace);
-    liftShortcuts << QKeySequence(Qt::Key_Delete);
     action->setShortcuts(liftShortcuts);
+    action->setAutoRepeat(false);
+    action->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    addAction(action);
     icon = QIcon::fromTheme("lift", QIcon(":/icons/oxygen/32x32/actions/lift.png"));
     action->setIcon(icon);
     connect(action, &QAction::triggered, this, [&]() {
@@ -1048,7 +1102,8 @@ void TimelineDock::setupActions()
     Actions.add("timelineOverwriteAction", action);
 
     action = new QAction(tr("Split At Playhead"), this);
-    action->setShortcut(QKeySequence(Qt::Key_S));
+    action->setShortcuts({QKeySequence(Qt::CTRL | Qt::Key_B), QKeySequence(Qt::Key_S)});
+    action->setAutoRepeat(false);
     icon = QIcon::fromTheme("slice", QIcon(":/icons/oxygen/32x32/actions/slice.png"));
     action->setIcon(icon);
     connect(action, &QAction::triggered, this, [&]() {
@@ -1112,7 +1167,9 @@ void TimelineDock::setupActions()
     Actions.add("timelineSplitAction", action);
 
     action = new QAction(tr("Split All Tracks At Playhead"), this);
-    action->setShortcut(QKeySequence(Qt::SHIFT | Qt::Key_S));
+    action->setShortcuts({QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_B),
+                          QKeySequence(Qt::SHIFT | Qt::Key_S)});
+    action->setAutoRepeat(false);
     connect(action, &QAction::triggered, this, [&]() {
         if (!isMultitrackValid())
             return;
@@ -2625,6 +2682,24 @@ int TimelineDock::addVideoTrack()
     return 0;
 }
 
+void TimelineDock::addCutItLayer(int kind)
+{
+    if (kind < 0 || kind > 3)
+        return;
+    if (kind == 1) {
+        addGenerator(new TextProducerWidget(this), true);
+        return;
+    }
+    // Text and images are composited on regular MLT video tracks.
+    const QStringList names{tr("Video"), tr("Text"), tr("Image"), tr("Audio")};
+    MAIN.undoStack()->beginMacro(tr("Add %1 layer").arg(names.at(kind)));
+    const int track = kind == 3 ? addAudioTrack() : addVideoTrack();
+    setTrackName(track, names.at(kind));
+    setCurrentTrack(track);
+    MAIN.undoStack()->endMacro();
+    emit showStatusMessage(tr("Layer created. Drag media onto this track to add a clip."));
+}
+
 /*!
     \qmlmethod void TimelineDock::alignSelectedClips()
     \brief Aligns selected clips to a common track using audio analysis.
@@ -3289,8 +3364,12 @@ void TimelineDock::emitSelectedFromSelection()
     int clipIndex = selection().isEmpty() ? 0 : selection().first().x();
     auto info = m_model.getClipInfo(trackIndex, clipIndex);
     if (info && info->producer && info->producer->is_valid()) {
-        m_updateCommand.reset(
-            new Timeline::UpdateCommand(*this, trackIndex, clipIndex, info->start));
+        // Properties edits need a before-state snapshot, ordinary selection does not.
+        // Opening Properties re-emits selection before enabling its controls.
+        m_updateCommand.reset();
+        if (MAIN.property("cutItPropertiesVisible").toBool())
+            m_updateCommand.reset(
+                new Timeline::UpdateCommand(*this, trackIndex, clipIndex, info->start));
         m_ignoreNextPositionChange = true;
         emit selected(info->producer);
     }
@@ -5035,9 +5114,11 @@ void TimelineDock::onNoMoreEmptyTracks(bool isAudio)
     }
 }
 
-void TimelineDock::addGenerator(QWidget *widget)
+void TimelineDock::addGenerator(QWidget *widget, bool newTextLayer)
 {
     auto dialog = new QDialog(this);
+    if (newTextLayer)
+        dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->resize(426, 288);
     dialog->setWindowModality(QmlApplication::dialogModality());
     auto vlayout = new QVBoxLayout(dialog);
@@ -5074,8 +5155,16 @@ void TimelineDock::addGenerator(QWidget *widget)
         if (QDialog::Accepted == result) {
             auto trackType = (QLatin1String("ToneProducerWidget") == name) ? AudioTrackType
                                                                            : VideoTrackType;
-            auto trackIndex = addTrackIfNeeded(trackType);
+            if (newTextLayer)
+                MAIN.undoStack()->beginMacro(tr("Add text layer"));
+            auto trackIndex = newTextLayer ? addVideoTrack() : addTrackIfNeeded(trackType);
+            if (newTextLayer) {
+                setTrackName(trackIndex, tr("Text"));
+                setCurrentTrack(trackIndex);
+            }
             overwrite(trackIndex, -1, MLT.XML(producer), false);
+            if (newTextLayer)
+                MAIN.undoStack()->endMacro();
             delete producer;
         }
         if (QLatin1String("TextProducerWidget") == name) {
@@ -5084,7 +5173,9 @@ void TimelineDock::addGenerator(QWidget *widget)
             MAIN.onPropertiesDockTriggered();
         }
     });
-    if (QLatin1String("NoiseWidget") == widget->objectName()) {
+    if (newTextLayer) {
+        dialog->accept();
+    } else if (QLatin1String("NoiseWidget") == widget->objectName()) {
         emit dialog->finished(QDialog::Accepted);
     } else {
         dialog->show();

@@ -257,7 +257,7 @@ Rectangle {
 
             PropertyChanges {
                 target: trackHeadRoot
-                color: isVideo ? root.shotcutBlue : 'darkseagreen'
+                color: isVideo ? root.shotcutBlue : '#666666'
             }
         },
         State {

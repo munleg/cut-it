@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2025 Meltytech, LLC
+ * Copyright (c) 2014-2026 Meltytech, LLC
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,83 +24,48 @@ import org.shotcut.qml as Shotcut
 Rectangle {
     id: wrapper
 
-    height: visible ? Logic.ITEM_HEIGHT : 0
-    color: activePalette.base
-
-    Row {
-        height: Logic.ITEM_HEIGHT
-
-        Rectangle {
-            color: activePalette.base
-            anchors.top: parent.top
-            width: parent.height
-            height: parent.height
-
-            ToolButton {
-                id: favButton
-
-                implicitWidth: 20
-                implicitHeight: 18
-                padding: 1
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.verticalCenter: parent.verticalCenter
-                opacity: favorite ? 1 : 0.3
-                icon.name: 'bookmarks'
-                icon.source: 'qrc:///icons/oxygen/32x32/places/bookmarks.png'
-                onClicked: favorite = !favorite
-            }
+    width: GridView.view ? GridView.view.cellWidth - 8 : 140
+    height: GridView.view ? GridView.view.cellHeight - 8 : 108
+    radius: 6
+    color: wrapper.GridView.isCurrentItem ? activePalette.alternateBase : activePalette.base
+    border.width: wrapper.GridView.isCurrentItem ? 1 : 0
+    border.color: activePalette.text
+    property var entry: metadatamodel.get(index)
+    Image {
+        id: thumbnail
+        anchors { top: parent.top; left: parent.left; right: parent.right; margins: 6 }
+        height: 64
+        source: entry && entry.icon.length ? entry.icon : 'qrc:///icons/oxygen/32x32/devices/video-television.png'
+        asynchronous: true
+        sourceSize.width: 180
+        sourceSize.height: 100
+        fillMode: Image.PreserveAspectFit
+    }
+    Label {
+        anchors { top: thumbnail.bottom; left: parent.left; right: parent.right; bottom: parent.bottom; margins: 6 }
+        text: name
+        color: activePalette.text
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+        elide: Text.ElideRight
+    }
+    MouseArea {
+        anchors.fill: parent
+        hoverEnabled: true
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onEntered: wrapper.GridView.view.currentIndex = index
+        onClicked: mouse => {
+            if (mouse.button === Qt.LeftButton) wrapper.GridView.view.itemSelected(index);
+            else if (pluginType === Shotcut.Metadata.FilterSet && service.length === 0) confirmDialog.show();
         }
-
-        Rectangle {
-            id: itemBackground
-
-            color: wrapper.ListView.isCurrentItem ? activePalette.highlight : activePalette.base
-            width: wrapper.ListView.view.width - favButton.width
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-
-            ToolButton {
-                id: itemIcon
-
-                implicitWidth: 20
-                implicitHeight: 18
-                padding: 1
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                enabled: false
-                icon.name: needsGpu ? 'cpu' : isAudio ? 'speaker' : pluginType === Shotcut.Metadata.Link ? 'chronometer' : pluginType === Shotcut.Metadata.FilterSet ? 'server-database' : 'video-television'
-                icon.source: needsGpu ? 'qrc:///icons/oxygen/32x32/devices/cpu.png' : isAudio ? 'qrc:///icons/oxygen/32x32/actions/speaker.png' : pluginType === Shotcut.Metadata.Link ? 'qrc:///icons/oxygen/32x32/actions/chronometer.png' : pluginType === Shotcut.Metadata.FilterSet ? 'qrc:///icons/oxygen/32x32/places/server-database.png' : 'qrc:///icons/oxygen/32x32/devices/video-television.png'
-            }
-
-            Label {
-                id: itemText
-
-                anchors.left: itemIcon.right
-                anchors.right: itemBackground.right
-                anchors.top: parent.top
-                anchors.bottom: parent.bottom
-                text: name
-                color: wrapper.ListView.isCurrentItem ? activePalette.highlightedText : activePalette.text
-                verticalAlignment: Text.AlignVCenter
-            }
-
-            MouseArea {
-                id: mouseArea
-
-                anchors.fill: parent
-                hoverEnabled: wrapper.height > 0
-                acceptedButtons: Qt.LeftButton | Qt.RightButton
-                onClicked: mouse => {
-                    if (mouse.button === Qt.LeftButton)
-                        wrapper.ListView.view.itemSelected(index);
-                    else if (pluginType === Shotcut.Metadata.FilterSet && service.length === 0)
-                        confirmDialog.show();
-                }
-                onEntered: {
-                    wrapper.ListView.view.currentIndex = index;
-                }
-            }
-        }
+    }
+    ToolButton {
+        anchors { top: parent.top; right: parent.right }
+        width: 26
+        height: 26
+        text: favorite ? "\u2605" : "\u2606"
+        Accessible.name: qsTr("Favorite")
+        onClicked: favorite = !favorite
     }
 
     Window {

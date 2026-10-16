@@ -1,83 +1,36 @@
-[![build-shotcut-linux](https://github.com/mltframework/shotcut/workflows/build-shotcut-linux/badge.svg)](https://github.com/mltframework/shotcut/actions?query=workflow%3Abuild-shotcut-linux+is%3Acompleted+branch%3Amaster)
-[![build-shotcut-macos](https://github.com/mltframework/shotcut/workflows/build-shotcut-macos/badge.svg)](https://github.com/mltframework/shotcut/actions?query=workflow%3Abuild-shotcut-macos+is%3Acompleted+branch%3Amaster)
-[![build-shotcut-windows](https://github.com/mltframework/shotcut/workflows/build-shotcut-windows/badge.svg)](https://github.com/mltframework/shotcut/actions?query=workflow%3Abuild-shotcut-windows+is%3Acompleted+branch%3Amaster)
+# Cut-it 0.1 Beta
 
+A free, open-source desktop video editor built on [Shotcut](https://github.com/mltframework/shotcut), with a simpler editing workspace. Windows is the current development focus.
 
-# Shotcut - a free, open source, cross-platform **video editor**
+## Make the edit, without the clutter
 
-<div align="center">
+- A monochrome workspace with the preview and timeline kept visible.
+- One-click text layers, font selection, quick styles, and optional Google Fonts downloads.
+- A searchable effects gallery with thumbnail cards.
+- Guided color adjustments for brightness, contrast, saturation, and white balance.
+- Ctrl+B to split. Backspace/Delete to delete and close the gap. Shift+Backspace to keep the gap.
+- Customizable keyboard shortcuts and existing Shotcut editing, export, and Undo support.
 
-<img src="https://www.shotcut.org/assets/img/screenshots/Shotcut-18.11.18.png" alt="screenshot" />
+## Beta status
 
-</div>
+This is an early beta, not a stability guarantee. The Windows build and five native regression tests pass. Desktop checks cover text creation and style changes, the color entry panel, and effects-gallery loading. Broad hardware testing, full workflow regression coverage, and a unified color-grading panel remain in progress.
 
-- Features: https://www.shotcut.org/features/
-- Roadmap: https://www.shotcut.org/roadmap/
+## Build on Windows
 
-## Install
+See [Build-CutIt.ps1](Build-CutIt.ps1), [upstream build documentation](README-SHOTCUT.md), and [the development notes](CUT-IT.md). The current local build uses MSYS2 MinGW64, Qt 6, MLT, FFmpeg, CMake and Ninja. The script stages a development build; it does not produce a complete standalone installer by itself.
 
-Binaries are regularly built and are available at https://www.shotcut.org/download/.
+Keep build outputs and personal media outside this repository. The NSIS packaging definition is [packaging/Cut-it.nsi](packaging/Cut-it.nsi).
 
-## Contributors
+## Downloads
 
-- Dan Dennedy <<http://www.dennedy.org>> : main author
-- Brian Matherly <<code@brianmatherly.com>> : contributor
+Public Windows binaries are not published yet. Before distributing the bundled installer, the release must include corresponding source and build information for its GPL/LGPL dependencies as well as Cut-it itself. Do not substitute an upstream source link for the modified release source.
 
-## Dependencies
+## Contributing
 
-Shotcut's direct (linked or hard runtime) dependencies are:
+Report the steps to reproduce, Windows version, media format, and expected behavior. Avoid attaching private footage or credentials. Small, focused improvements and reproducible performance measurements are welcome.
 
-- [MLT](https://www.mltframework.org/): multimedia authoring framework
-- [Qt 6 (6.4 minimum)](https://www.qt.io/): application and UI framework
-- [FFTW](https://fftw.org/)
-- [FFmpeg](https://www.ffmpeg.org/): multimedia format and codec libraries
-- [Frei0r](https://www.dyne.org/software/frei0r/): video plugins
-- [SDL](http://www.libsdl.org/): cross-platform audio playback
+## License and attribution
 
-See https://shotcut.org/credits/ for a more complete list including indirect
-and bundled dependencies.
+Cut-it is an independent modification of Shotcut and is not affiliated with or endorsed by Meltytech. Shotcut was created by Dan Dennedy, with Brian Matherly and other contributors. Video processing remains powered by MLT and FFmpeg; the interface uses Qt.
 
-## License
-
-GPLv3. See [COPYING](COPYING).
-
-## How to build
-
-**Warning**: building Shotcut should only be reserved to beta testers or contributors who know what they are doing.
-
-### Qt Creator
-
-The fastest way to build and try Shotcut development version is through [Qt Creator](https://www.qt.io/download#qt-creator).
-
-### From command line
-
-First, check dependencies are satisfied and various paths are correctly set to find different libraries and include files (Qt, MLT, frei0r and so forth).
-
-#### Configure
-
-In a new directory in which to make the build (separate from the source):
-
-```
-cmake -DCMAKE_INSTALL_PREFIX=/usr/local/ /path/to/shotcut
-```
-
-We recommend using the Ninja generator by adding `-GNinja` to the above command line.
-
-#### Build
-
-```
-cmake --build .
-```
-
-#### Install
-
-If you do not install, Shotcut may fail when you run it because it cannot locate its QML
-files that it reads at run-time.
-
-```
-cmake --install .
-```
-
-## Translation
-
-If you want to translate Shotcut to another language, please use [Transifex](https://explore.transifex.com/ddennedy/shotcut/).
+Source code is licensed under the GNU General Public License, version 3 or later, except where individual files specify otherwise. See [COPYING](COPYING), original file notices, [upstream documentation](README-SHOTCUT.md), and the bundled font licenses. Original copyright and attribution notices are retained.

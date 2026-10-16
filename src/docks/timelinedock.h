@@ -135,6 +135,7 @@ signals:
 public slots:
     int addAudioTrack();
     int addVideoTrack();
+    void addCutItLayer(int kind);
     void alignSelectedClips();
     void onShowFrame(const SharedFrame &frame);
     void onSeeked(int position);
@@ -236,7 +237,7 @@ private:
     void applyCopiedFiltersToSelectdClips();
     void insertOrOverwriteDrop(int trackIndex, int position, const QString &xml);
     void freezeFrame();
-    void addGenerator(QWidget *widget);
+    void addGenerator(QWidget *widget, bool newTextLayer = false);
 
     QQuickWidget m_quickView;
     MultitrackModel m_model;

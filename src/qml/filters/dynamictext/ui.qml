@@ -18,339 +18,239 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Shotcut.Controls as Shotcut
-import org.shotcut.qml as Shotcut
 
-Shotcut.KeyframableFilter {
-    function setControls() {
-        textArea.text = filter.get('argument');
-        textFilterUi.setControls();
-    }
-
-    keyframableParameters: ['fgcolour', 'olcolour', 'bgcolour', 'opacity']
-    startValues: [Qt.rgba(1, 1, 1, 1), Qt.rgba(0, 0, 0, 2.0 / 3.0), Qt.rgba(0, 0, 0, 0), 0.0]
-    middleValues: [Qt.rgba(1, 1, 1, 1), Qt.rgba(0, 0, 0, 2.0 / 3.0), Qt.rgba(0, 0, 0, 0), 1.0]
-    endValues: [Qt.rgba(1, 1, 1, 1), Qt.rgba(0, 0, 0, 2.0 / 3.0), Qt.rgba(0, 0, 0, 0), 0.0]
+Item {
+    id: root
     width: 425
-    height: 455
-    Component.onCompleted: {
-        filter.blockSignals = true;
-        filter.set(textFilterUi.middleValue, Qt.rect(0, 0, profile.width, profile.height));
-        filter.set(textFilterUi.startValue, Qt.rect(0, 0, profile.width, profile.height));
-        filter.set(textFilterUi.endValue, Qt.rect(0, 0, profile.width, profile.height));
-        if (filter.isNew) {
-            var presetParams = preset.parameters.slice();
-            var index = presetParams.indexOf('argument');
-            if (index > -1)
-                presetParams.splice(index, 1);
-            if (application.OS === 'Windows')
-                filter.set('family', 'Verdana');
-            else if (application.OS === 'macOS')
-                filter.set('family', "Helvetica");
-            filter.set('fgcolour', '#ffffffff');
-            filter.set('bgcolour', '#00000000');
-            filter.set('olcolour', '#aa000000');
-            filter.set('opacity', 1.0);
-            filter.set('outline', 3);
-            filter.set('weight', Font.Normal);
-            filter.set('style', 'normal');
-            filter.set(textFilterUi.useFontSizeProperty, false);
-            filter.set('size', profile.height);
-            filter.set(textFilterUi.rectProperty, '0%/50%:50%x50%');
-            filter.set(textFilterUi.valignProperty, 'bottom');
-            filter.set(textFilterUi.halignProperty, 'left');
-            filter.savePreset(presetParams, qsTr('Bottom Left'));
-            filter.set(textFilterUi.rectProperty, '50%/50%:50%x50%');
-            filter.set(textFilterUi.valignProperty, 'bottom');
-            filter.set(textFilterUi.halignProperty, 'right');
-            filter.savePreset(presetParams, qsTr('Bottom Right'));
-            filter.set(textFilterUi.rectProperty, '0%/0%:50%x50%');
-            filter.set(textFilterUi.valignProperty, 'top');
-            filter.set(textFilterUi.halignProperty, 'left');
-            filter.savePreset(presetParams, qsTr('Top Left'));
-            filter.set(textFilterUi.rectProperty, '50%/0%:50%x50%');
-            filter.set(textFilterUi.valignProperty, 'top');
-            filter.set(textFilterUi.halignProperty, 'right');
-            filter.savePreset(presetParams, qsTr('Top Right'));
-            filter.set(textFilterUi.rectProperty, '0%/76%:100%x14%');
-            filter.set(textFilterUi.valignProperty, 'bottom');
-            filter.set(textFilterUi.halignProperty, 'center');
-            filter.savePreset(presetParams, qsTr('Lower Third'));
-            // Add some animated presets.
-            filter.animateIn = Math.round(profile.fps);
-            filter.set(textFilterUi.rectProperty, '0=-100%/0%:100%x100%; :1.0=0%/0%:100%x100%');
-            filter.savePreset(presetParams.concat('shotcut:animIn'), qsTr('Slide In From Left'));
-            filter.set(textFilterUi.rectProperty, '0=100%/0%:100%x100%; :1.0=0%/0%:100%x100%');
-            filter.savePreset(presetParams.concat('shotcut:animIn'), qsTr('Slide In From Right'));
-            filter.set(textFilterUi.rectProperty, '0=0%/-100%:100%x100%; :1.0=0%/0%:100%x100%');
-            filter.savePreset(presetParams.concat('shotcut:animIn'), qsTr('Slide In From Top'));
-            filter.set(textFilterUi.rectProperty, '0=0%/100%:100%x100%; :1.0=0%/0%:100%x100%');
-            filter.savePreset(presetParams.concat('shotcut:animIn'), qsTr('Slide In From Bottom'));
-            filter.animateIn = 0;
-            filter.animateOut = Math.round(profile.fps);
-            filter.set(textFilterUi.rectProperty, ':-1.0=0%/0%:100%x100%; -1=-100%/0%:100%x100%');
-            filter.savePreset(presetParams.concat('shotcut:animOut'), qsTr('Slide Out Left'));
-            filter.set(textFilterUi.rectProperty, ':-1.0=0%/0%:100%x100%; -1=100%/0%:100%x100%');
-            filter.savePreset(presetParams.concat('shotcut:animOut'), qsTr('Slide Out Right'));
-            filter.set(textFilterUi.rectProperty, ':-1.0=0%/0%:100%x100%; -1=0%/-100%:100%x100%');
-            filter.savePreset(presetParams.concat('shotcut:animOut'), qsTr('Slide Out Top'));
-            filter.set(textFilterUi.rectProperty, ':-1.0=0%/0%:100%x100%; -1=0%/100%:100%x100%');
-            filter.savePreset(presetParams.concat('shotcut:animOut'), qsTr('Slide Out Bottom'));
-            filter.animateOut = 0;
-            filter.animateIn = filter.duration;
-            filter.set(textFilterUi.rectProperty, '0=0%/0%:100%x100%; -1=-5%/-5%:110%x110%');
-            filter.savePreset(presetParams.concat('shotcut:animIn'), qsTr('Slow Zoom In'));
-            filter.set(textFilterUi.rectProperty, '0=-5%/-5%:110%x110%; -1=0%/0%:100%x100%');
-            filter.savePreset(presetParams.concat('shotcut:animIn'), qsTr('Slow Zoom Out'));
-            filter.set(textFilterUi.rectProperty, '0=-5%/-5%:110%x110%; -1=-10%/-5%:110%x110%');
-            filter.deletePreset(qsTr('Slow Pan Left'));
-            filter.savePreset(presetParams.concat('shotcut:animIn'), qsTr('Slow Move Left'));
-            filter.set(textFilterUi.rectProperty, '0=-5%/-5%:110%x110%; -1=0%/-5%:110%x110%');
-            filter.deletePreset(qsTr('Slow Pan Right'));
-            filter.savePreset(presetParams.concat('shotcut:animIn'), qsTr('Slow Move Right'));
-            filter.set(textFilterUi.rectProperty, '0=-5%/-5%:110%x110%; -1=-5%/-10%:110%x110%');
-            filter.deletePreset(qsTr('Slow Pan Up'));
-            filter.savePreset(presetParams.concat('shotcut:animIn'), qsTr('Slow Move Up'));
-            filter.set(textFilterUi.rectProperty, '0=-5%/-5%:110%x110%; -1=-5%/0%:110%x110%');
-            filter.deletePreset(qsTr('Slow Pan Down'));
-            filter.savePreset(presetParams.concat('shotcut:animIn'), qsTr('Slow Move Down'));
-            filter.set(textFilterUi.rectProperty, '0=0%/0%:100%x100%; -1=-10%/-10%:110%x110%');
-            filter.deletePreset(qsTr('Slow Zoom In, Pan Up Left'));
-            filter.savePreset(presetParams.concat('shotcut:animIn'), qsTr('Slow Zoom In, Move Up Left'));
-            filter.set(textFilterUi.rectProperty, '0=0%/0%:100%x100%; -1=0%/0%:110%x110%');
-            filter.deletePreset(qsTr('Slow Zoom In, Pan Down Right'));
-            filter.savePreset(presetParams.concat('shotcut:animIn'), qsTr('Slow Zoom In, Move Down Right'));
-            filter.set(textFilterUi.rectProperty, '0=-10%/0%:110%x110%; -1=0%/0%:100%x100%');
-            filter.deletePreset(qsTr('Slow Zoom Out, Pan Up Right'));
-            filter.savePreset(presetParams.concat('shotcut:animIn'), qsTr('Slow Zoom Out, Move Up Right'));
-            filter.set(textFilterUi.rectProperty, '0=0%/-10%:110%x110%; -1=0%/0%:100%x100%');
-            filter.deletePreset(qsTr('Slow Zoom Out, Pan Down Left'));
-            filter.savePreset(presetParams.concat('shotcut:animIn'), qsTr('Slow Zoom Out, Move Down Left'));
-            filter.animateIn = 0;
-            filter.resetProperty(textFilterUi.rectProperty);
-            // Add default preset.
-            filter.set(textFilterUi.rectProperty, '0%/0%:100%x100%');
-            filter.savePreset(presetParams);
-        } else {
-            if (filter.get('opacity') === null)
-                filter.set('opacity', 1.0);
-            filter.set(textFilterUi.middleValue, filter.getRect(textFilterUi.rectProperty, filter.animateIn + 1));
-            if (filter.animateIn > 0)
-                filter.set(textFilterUi.startValue, filter.getRect(textFilterUi.rectProperty, 0));
-            if (filter.animateOut > 0)
-                filter.set(textFilterUi.endValue, filter.getRect(textFilterUi.rectProperty, filter.duration - 1));
-        }
-        insertCombo.currentIndex = -1;
-        filter.blockSignals = false;
-        setControls();
-        if (filter.isNew)
-            filter.set(textFilterUi.rectProperty, filter.getRect(textFilterUi.rectProperty));
+    height: advanced.checked ? 850 : editor.implicitHeight + 24
+    property bool syncing: true
+    property bool writing: false
+    property bool cutItSimpleEditor: !advanced.checked
+    function put(name, value) {
+        writing = true;
+        filter.set(name, value);
+        writing = false;
     }
-
-    GridLayout {
-        id: textGrid
-
-        columns: 2
-        anchors.fill: parent
-        anchors.margins: 8
-
+    function sync() {
+        if (writing) return;
+        syncing = true;
+        if (words.text !== filter.get('argument')) words.text = filter.get('argument');
+        fonts.currentIndex = fonts.find(filter.get('family'));
+        size.value = Math.max(8, Math.round(filter.getDouble('size')));
+        bold.checked = filter.getDouble('weight') >= 600;
+        italic.checked = filter.get('style') === 'italic';
+        ink.value = filter.get('fgcolour') || '#ffffffff';
+        syncing = false;
+    }
+    function fontSize(px) {
+        put('shotcut:usePointSize', 1);
+        put('shotcut:pointSize', 0);
+        put('size', px);
+    }
+    function style(index) {
+        put('fgcolour', '#ffffffff');
+        put('bgcolour', index === 2 ? '#bb000000' : '#00000000');
+        put('olcolour', '#ff000000');
+        put('outline', index === 1 ? 4 : 0);
+        put('weight', index === 3 ? 700 : 400);
+        fontSize(Math.round(profile.height * (index === 3 ? 0.10 : 0.06)));
+        sync();
+    }
+    Component.onCompleted: {
+        if (filter.isNew) {
+            put('argument', qsTr('Your text'));
+            put('family', 'Noto Sans');
+            put('geometry', '5%/5%:90%x90%');
+            put('halign', 'center');
+            put('valign', 'middle');
+            put('opacity', 1.0);
+            style(0);
+        }
+        sync();
+    }
+    Connections {
+        target: filter
+        function onChanged() { root.sync(); }
+    }
+    Connections {
+        target: cutItFonts
+        function onFamiliesChanged() { Qt.callLater(root.sync); }
+    }
+    ColumnLayout {
+        id: editor
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.margins: 12
+        spacing: 10
+        visible: !advanced.checked
+        Label { text: qsTr('Text'); font.pixelSize: 18; font.bold: true; color: '#ffffff' }
         Label {
-            text: qsTr('Preset')
-            Layout.alignment: Qt.AlignRight
+            text: qsTr('Edits affect the selected text clip.')
+            color: '#888888'
+            font.pixelSize: 11
+            wrapMode: Text.WordWrap
+            Layout.fillWidth: true
         }
-
-        Shotcut.Preset {
-            id: preset
-
-            parameters: textFilterUi.parameterList.concat(['argument'])
-            onBeforePresetLoaded: {
-                filter.resetProperty(textFilterUi.rectProperty);
-                filter.set(textFilterUi.pointSizeProperty, 0);
-                resetSimpleKeyframes();
-            }
-            onPresetSelected: {
-                if (filter.get('opacity') === '')
-                    filter.set('opacity', 1.0);
-                setControls();
-                textFilterUi.setKeyframedControls();
-                initializeSimpleKeyframes();
-                filter.blockSignals = true;
-                filter.set(textFilterUi.middleValue, filter.getRect(textFilterUi.rectProperty, filter.animateIn + 1));
-                if (filter.animateIn > 0)
-                    filter.set(textFilterUi.startValue, filter.getRect(textFilterUi.rectProperty, 0));
-                if (filter.animateOut > 0)
-                    filter.set(textFilterUi.endValue, filter.getRect(textFilterUi.rectProperty, filter.duration - 1));
-                filter.blockSignals = false;
+        ScrollView {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 110
+            clip: true
+            TextArea {
+                id: words
+                placeholderText: qsTr('Type your text…')
+                wrapMode: TextEdit.Wrap
+                selectByMouse: true
+                color: '#ffffff'
+                background: Rectangle {
+                    color: '#1a1a1a'
+                    border.color: '#333333'
+                    radius: 4
+                }
+                onTextChanged: if (!root.syncing) root.put('argument', text)
             }
         }
-
-        Label {
-            text: qsTr('Text')
-            Layout.alignment: Qt.AlignRight | Qt.AlignTop
+        Label { text: qsTr('Font'); color: '#cccccc'; font.pixelSize: 12 }
+        ComboBox {
+            id: fonts
+            Layout.fillWidth: true
+            editable: true
+            model: cutItFonts.families
+            onActivated: root.put('family', currentText)
+            onAccepted: if (find(editText) >= 0) root.put('family', editText)
         }
-
-        Item {
-            Layout.minimumHeight: fontMetrics.height * 6
-            Layout.maximumHeight: Layout.minimumHeight
-            Layout.minimumWidth: preset.width
-            Layout.maximumWidth: preset.width
-
-            FontMetrics {
-                id: fontMetrics
-
-                font: textArea.font
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+            RowLayout {
+                spacing: 6
+                Label { text: qsTr('Size:'); color: '#cccccc' }
+                SpinBox {
+                    id: size
+                    from: 8; to: 1000; editable: true
+                    implicitWidth: 100
+                    onValueModified: root.fontSize(value)
+                }
             }
-
-            ScrollView {
-                id: scrollview
-
-                width: preset.width - (ScrollBar.vertical.visible ? 16 : 0)
-                height: parent.height - (ScrollBar.horizontal.visible ? 16 : 0)
-                clip: true
-
-                TextArea {
-                    id: textArea
-
-                    property int maxLength: 256
-
-                    textFormat: TextEdit.PlainText
-                    wrapMode: TextEdit.NoWrap
-                    selectByMouse: true
-                    persistentSelection: true
-                    padding: 0
-                    text: '__empty__'
-                    onTextChanged: {
-                        if (text === '__empty__')
-                            return;
-                        if (length > maxLength) {
-                            text = text.substring(0, maxLength);
-                            cursorPosition = maxLength;
+            RowLayout {
+                spacing: 4
+                Button {
+                    id: bold
+                    text: qsTr('B'); font.bold: true; checkable: true
+                    implicitWidth: 34
+                    onClicked: root.put('weight', checked ? 700 : 400)
+                }
+                Button {
+                    id: italic
+                    text: qsTr('I'); font.italic: true; checkable: true
+                    implicitWidth: 34
+                    onClicked: root.put('style', checked ? 'italic' : 'normal')
+                }
+            }
+            RowLayout {
+                spacing: 6
+                Layout.alignment: Qt.AlignRight
+                Label { text: qsTr('Color:'); color: '#cccccc' }
+                Shotcut.ColorPicker {
+                    id: ink
+                    eyedropper: false
+                    onValueChanged: if (!root.syncing) root.put('fgcolour', value.toString())
+                }
+            }
+        }
+        Label { text: qsTr('Quick Styles'); color: '#cccccc'; font.pixelSize: 12 }
+        GridLayout {
+            columns: 2
+            rowSpacing: 6
+            columnSpacing: 6
+            Layout.fillWidth: true
+            Repeater {
+                model: [
+                    { name: qsTr('Plain'), sample: 'Aa', bg: '#2b2b2b', fg: '#ffffff', bold: false, outline: false },
+                    { name: qsTr('Outline'), sample: 'Aa', bg: '#2b2b2b', fg: '#ffffff', bold: false, outline: true },
+                    { name: qsTr('Caption'), sample: 'Aa', bg: '#111111', fg: '#ffffff', bold: false, outline: false },
+                    { name: qsTr('Title'), sample: 'AA', bg: '#2b2b2b', fg: '#ffffff', bold: true, outline: false }
+                ]
+                Button {
+                    id: styleBtn
+                    Accessible.name: modelData.name
+                    required property int index
+                    required property var modelData
+                    Layout.fillWidth: true
+                    implicitHeight: 38
+                    onClicked: root.style(index)
+                    contentItem: RowLayout {
+                        spacing: 8
+                        Rectangle {
+                            width: 28
+                            height: 24
+                            radius: 3
+                            color: styleBtn.modelData.bg
+                            border.color: styleBtn.modelData.outline ? '#ffffff' : '#444444'
+                            border.width: styleBtn.modelData.outline ? 1.5 : 1
+                            Layout.alignment: Qt.AlignVCenter
+                            Text {
+                                anchors.centerIn: parent
+                                text: styleBtn.modelData.sample
+                                color: styleBtn.modelData.fg
+                                style: styleBtn.modelData.outline ? Text.Outline : Text.Normal
+                                styleColor: "#000000"
+                                font.bold: styleBtn.modelData.bold
+                                font.pixelSize: styleBtn.modelData.bold ? 13 : 11
+                            }
                         }
-                        if (!parseInt(filter.get(textFilterUi.useFontSizeProperty)))
-                            filter.set('size', profile.height / text.split('\n').length);
-                        filter.set('argument', text);
-                    }
-                    Keys.onPressed: event => {
-                        if (event.key === Qt.Key_V && (event.modifiers & Qt.ShiftModifier) && (event.modifiers & Qt.ControlModifier || event.modifiers & Qt.MetaModifier)) {
-                            event.accepted = true;
-                            textArea.paste();
+                        Text {
+                            text: styleBtn.modelData.name
+                            color: '#e0e0e0'
+                            font.pixelSize: 12
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                            verticalAlignment: Text.AlignVCenter
                         }
                     }
-
-                    MouseArea {
-                        enabled: application.OS !== 'Windows'
-                        acceptedButtons: Qt.RightButton
-                        anchors.fill: parent
-                        onClicked: contextMenu.popup()
-                    }
-
-                    Shotcut.EditMenu {
-                        id: contextMenu
-                    }
-
                     background: Rectangle {
-                        anchors.fill: parent
-                        color: textArea.palette.base
+                        color: styleBtn.down ? '#383838' : (styleBtn.hovered ? '#303030' : '#242424')
+                        border.color: '#3d3d3d'
+                        radius: 4
                     }
-                    // workaround initialization problem
-                }
-
-                ScrollBar.horizontal: Shotcut.HorizontalScrollBar {
-                    policy: ScrollBar.AlwaysOn
-                    visible: scrollview.contentWidth > scrollview.width
-                    parent: scrollview.parent
-                    anchors.top: scrollview.bottom
-                    anchors.left: scrollview.left
-                    anchors.right: scrollview.right
-                }
-
-                ScrollBar.vertical: Shotcut.VerticalScrollBar {
-                    policy: ScrollBar.AlwaysOn
-                    visible: scrollview.contentHeight > scrollview.height
-                    parent: scrollview.parent
-                    anchors.top: scrollview.top
-                    anchors.left: scrollview.right
-                    anchors.bottom: scrollview.bottom
                 }
             }
         }
-
-        Label {
-            text: qsTr('Insert field')
-            Layout.alignment: Qt.AlignRight
-        }
-
-        Shotcut.ComboBox {
-            id: insertCombo
-
-            implicitWidth: 180
-            textRole: 'text'
-            onActivated: {
-                if (currentIndex >= 0) {
-                    textArea.insert(textArea.cursorPosition, insertModel.get(currentIndex).value);
-                }
-                insertCombo.currentIndex = -1;
-            }
-
-            model: ListModel {
-                id: insertModel
-
-                ListElement {}
-
-                ListElement {
-                    text: qsTr('# (Hash sign)')
-                    value: '\\#'
-                }
-
-                ListElement {
-                    text: qsTr('Timecode (drop frame)')
-                    value: '#timecode#'
-                }
-
-                ListElement {
-                    text: qsTr('Timecode (non-drop frame)')
-                    value: '#smpte_ndf#'
-                }
-
-                ListElement {
-                    text: qsTr('Frame #', 'Frame number')
-                    value: '#frame#'
-                }
-
-                ListElement {
-                    text: qsTr('File date')
-                    value: '#localfiledate#'
-                }
-
-                ListElement {
-                    text: qsTr('Creation date')
-                    value: '#createdate#'
-                }
-
-                ListElement {
-                    text: qsTr('File name and path')
-                    value: '#resource#'
-                }
-
-                ListElement {
-                    text: qsTr('File name')
-                    value: '#filename#'
-                }
-
-                ListElement {
-                    text: qsTr('File base name')
-                    value: '#basename#'
+        RowLayout {
+            Label { text: qsTr('Position'); color: '#cccccc' }
+            ComboBox {
+                Layout.fillWidth: true
+                model: [qsTr('Choose…'), qsTr('Top'), qsTr('Center'), qsTr('Bottom')]
+                onActivated: {
+                    if (!currentIndex) return;
+                    root.put('geometry', '5%/5%:90%x90%');
+                    root.put('valign', ['top', 'middle', 'bottom'][currentIndex - 1]);
+                    root.put('halign', 'center');
                 }
             }
         }
-
-        Shotcut.TextFilterUi {
-            id: textFilterUi
-            showOpacity: filter.isAtLeastVersion(2)
-            Layout.columnSpan: 2
+        Label { text: qsTr('Hold Shift and drag the text in the preview to position it.'); color: '#888888'; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+        Button { id: moreFonts; text: checked ? qsTr('Hide online fonts') : qsTr('More fonts'); checkable: true }
+        RowLayout {
+            visible: moreFonts.checked
+            ComboBox { id: onlineFont; Layout.fillWidth: true; model: cutItFonts.googleFamilies }
+            Button { text: cutItFonts.busy ? qsTr('Downloading…') : qsTr('Get font'); enabled: !cutItFonts.busy; onClicked: cutItFonts.download(onlineFont.currentText) }
         }
-
-        Item {
-            Layout.fillHeight: true
-        }
+        Label { visible: moreFonts.checked; text: cutItFonts.status || qsTr('Lato, Noto Sans and Bebas Neue are ready offline.'); color: '#888888'; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+        Button { text: qsTr('Advanced text and animation'); onClicked: advanced.checked = true }
+    }
+    Button {
+        id: advanced
+        visible: checked
+        checkable: true
+        text: qsTr('Back to simple text')
+        anchors.top: parent.top
+        onClicked: { checked = false; root.sync(); }
+    }
+    Loader {
+        anchors.top: advanced.bottom
+        anchors.topMargin: 8
+        width: parent.width
+        active: advanced.checked
+        source: active ? 'AdvancedText.qml' : ''
     }
 }

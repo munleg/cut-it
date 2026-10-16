@@ -133,6 +133,35 @@ Player::Player(QWidget *parent)
     // Add the new project widget.
     m_projectWidget = new NewProjectFolder(this);
     vlayout->addWidget(m_projectWidget, 10);
+    m_emptyPreview = new QWidget(this);
+    m_emptyPreview->setObjectName("cutItEmptyPreview");
+    m_emptyPreview->setStyleSheet(QStringLiteral(
+        "QWidget#cutItEmptyPreview { background: #101010; border-radius: 8px; }"
+        "QPushButton { padding: 10px 22px; border-radius: 6px; background: #505050; color: white; }"));
+    auto emptyLayout = new QVBoxLayout(m_emptyPreview);
+    emptyLayout->addStretch();
+    auto emptyTitle = new QLabel(tr("Your video starts here"), m_emptyPreview);
+    emptyTitle->setAlignment(Qt::AlignCenter);
+    emptyTitle->setStyleSheet(QStringLiteral("font-size: 22px; color: #eeeeee;"));
+    emptyLayout->addWidget(emptyTitle);
+    auto emptyHint = new QLabel(tr("Import a video, image or audio file to start editing."), m_emptyPreview);
+    emptyHint->setAlignment(Qt::AlignCenter);
+    emptyHint->setWordWrap(true);
+    emptyHint->setStyleSheet(QStringLiteral("color: #aaaaaa; padding: 8px;"));
+    emptyLayout->addWidget(emptyHint);
+    auto importButton = new QPushButton(tr("Import media"), m_emptyPreview);
+    emptyLayout->addWidget(importButton, 0, Qt::AlignHCenter);
+    connect(importButton, &QPushButton::clicked, this, []() { MAIN.openVideo(); });
+    auto projectButton = new QPushButton(tr("Project settings…"), m_emptyPreview);
+    projectButton->setFlat(true);
+    emptyLayout->addWidget(projectButton, 0, Qt::AlignHCenter);
+    connect(projectButton, &QPushButton::clicked, this, [this]() {
+        m_emptyPreview->hide();
+        m_projectWidget->show();
+    });
+    emptyLayout->addStretch();
+    vlayout->addWidget(m_emptyPreview, 10);
+    m_projectWidget->hide();
     vlayout->addStretch();
 
     // Add the volume and signal level meter
@@ -189,6 +218,19 @@ Player::Player(QWidget *parent)
     m_scrubber->setObjectName("scrubBar");
     m_scrubber->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Preferred);
     vlayout->addWidget(m_scrubber);
+    // The full timeline is the primary seek surface. Source scrubbing remains
+    // available when explicitly enabled in the player context menu.
+    m_scrubber->hide();
+    m_previewSeek = new QSlider(Qt::Horizontal, this);
+    m_previewSeek->setAccessibleName(tr("Preview position"));
+    m_previewSeek->setEnabled(false);
+    m_previewSeek->setFixedHeight(16);
+    m_previewSeek->setStyleSheet(QStringLiteral(
+        "QSlider::groove:horizontal { height: 3px; background: #383838; }"
+        "QSlider::sub-page:horizontal { background: #ffffff; }"
+        "QSlider::handle:horizontal { background: #eeeeee; width: 9px; margin: -3px 0; border-radius: 4px; }"));
+    vlayout->addWidget(m_previewSeek);
+    connect(m_previewSeek, &QSlider::valueChanged, this, &Player::seek);
 
     // Make a toolbar for the current and total duration times
     m_currentDurationToolBar = new DockToolBar(tr("Current/Total Times"), this);
@@ -199,6 +241,10 @@ Player::Player(QWidget *parent)
     m_positionSpinner->setToolTip(tr("Current position"));
     m_positionSpinner->setEnabled(false);
     m_positionSpinner->setKeyboardTracking(false);
+    connect(m_positionSpinner, &QSpinBox::valueChanged, this, [this](int position) {
+        const QSignalBlocker blocker(m_previewSeek);
+        m_previewSeek->setValue(position);
+    });
     m_currentDurationToolBar->addWidget(m_positionSpinner);
     m_currentDurationToolBar->addWidget(new QLabel(" / "));
     m_durationLabel = new QLabel(this);
@@ -219,6 +265,8 @@ Player::Player(QWidget *parent)
     m_controlsToolBar->addAction(Actions["playerPlayPauseAction"]);
     m_controlsToolBar->addAction(Actions["playerFastForwardAction"]);
     m_controlsToolBar->addAction(Actions["playerSkipNextAction"]);
+    m_controlsToolBar->removeAction(Actions["playerRewindAction"]);
+    m_controlsToolBar->removeAction(Actions["playerFastForwardAction"]);
 
     // Make a toolbar for player options
     m_optionsToolBar = new DockToolBar(tr("Player Options"), this);
@@ -409,6 +457,25 @@ Player::Player(QWidget *parent)
     m_selectedLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     m_selectedLabel->setFixedHeight(m_positionSpinner->sizeHint().height());
     m_inSelectedToolBar->addWidget(m_selectedLabel);
+    m_inSelectedToolBar->hide();
+    // Keep volume visible; group less frequent preview controls behind one menu.
+    auto previewOptions = new QToolButton(this);
+    previewOptions->setText(tr("View"));
+    previewOptions->setPopupMode(QToolButton::InstantPopup);
+    auto previewMenu = new QMenu(previewOptions);
+    previewMenu->addMenu(m_zoomMenu)->setText(tr("Zoom"));
+    previewMenu->addMenu(gridMenu)->setText(tr("Guides"));
+    previewMenu->addMenu(loopMenu)->setText(tr("Loop range"));
+    previewMenu->addAction(Actions["playerLoopAction"]);
+    auto sourceScrub = previewMenu->addAction(tr("Show source scrub bar"));
+    sourceScrub->setCheckable(true);
+    connect(sourceScrub, &QAction::toggled, m_scrubber, &QWidget::setVisible);
+    previewOptions->setMenu(previewMenu);
+    for (auto action : m_optionsToolBar->actions()) {
+        if (m_optionsToolBar->widgetForAction(action) != m_volumeButton)
+            m_optionsToolBar->removeAction(action);
+    }
+    m_optionsToolBar->addWidget(previewOptions);
 
     // Create two rows for the toolbars.
     // The toolbars will be layed out in one or two rows depending on the width.
@@ -904,6 +971,11 @@ void Player::reset()
     m_selectedLabel->setText(blankTime());
     m_durationLabel->setText(blankTime());
     m_scrubber->setDisabled(true);
+    m_previewSeek->setEnabled(false);
+    {
+        const QSignalBlocker blocker(m_previewSeek);
+        m_previewSeek->setValue(0);
+    }
     m_scrubber->setScale(1);
     m_positionSpinner->setValue(0);
     m_positionSpinner->setDisabled(true);
@@ -913,7 +985,8 @@ void Player::reset()
     Actions["playerRewindAction"]->setDisabled(true);
     Actions["playerFastForwardAction"]->setDisabled(true);
     m_videoWidget->hide();
-    m_projectWidget->show();
+    m_projectWidget->hide();
+    m_emptyPreview->show();
     m_previousIn = m_previousOut = -1;
 }
 
@@ -923,7 +996,13 @@ void Player::onProducerOpened(bool play)
         return;
     m_projectWidget->hide();
     m_videoWidget->show();
+    m_emptyPreview->hide();
     m_duration = MLT.producer()->get_length();
+    {
+        const QSignalBlocker blocker(m_previewSeek);
+        m_previewSeek->setRange(0, qMax(0, m_duration - 1));
+        m_previewSeek->setEnabled(MLT.isSeekable());
+    }
     setLoopRange(0, m_duration - 1);
     m_isSeekable = MLT.isSeekable();
     MLT.producer()->set("ignore_points", 1);
@@ -994,6 +1073,10 @@ void Player::onProducerOpened(bool play)
 void Player::onDurationChanged()
 {
     m_duration = MLT.producer()->get_length();
+    {
+        const QSignalBlocker blocker(m_previewSeek);
+        m_previewSeek->setRange(0, qMax(0, m_duration - 1));
+    }
     setLoopRange(0, m_duration - 1);
     m_isSeekable = MLT.isSeekable();
     m_scrubber->setScale(m_duration);
@@ -1026,6 +1109,10 @@ void Player::onFrameDisplayed(const SharedFrame &frame)
         m_positionSpinner->blockSignals(true);
         m_positionSpinner->setValue(position);
         m_positionSpinner->blockSignals(false);
+        if (!m_previewSeek->isSliderDown()) {
+            const QSignalBlocker blocker(m_previewSeek);
+            m_previewSeek->setValue(position);
+        }
         m_scrubber->onSeek(position);
         if (m_playPosition < m_previousOut && m_position >= m_previousOut && !loop) {
             pause(m_previousOut);
@@ -1227,7 +1314,7 @@ void Player::layoutToolbars()
 {
     int totalWidth = m_currentDurationToolBar->sizeHint().width()
                      + m_controlsToolBar->sizeHint().width() + m_optionsToolBar->sizeHint().width()
-                     + m_inSelectedToolBar->sizeHint().width() + 20;
+                     + 20;
     bool twoRowsInUse = m_toolRow2->count() > 0;
 
     if (m_toolRow1->count() > 0) {
