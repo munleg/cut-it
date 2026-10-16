@@ -1592,8 +1592,19 @@ void TimelineDock::setupActions()
     });
     Actions.add("timelineZoomFitAction", action);
 
-    action = new QAction(tr("Find silence"), this);
-    action->setShortcut(QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_S));
+    action = new QAction(tr("Silence Removal"), this);
+    action->setShortcut(QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_V));
+    // Migrate only the old conflicting binding; preserve other custom shortcuts.
+    auto silenceShortcuts = Settings.shortcuts(QStringLiteral("timelineFindSilenceAction"));
+    bool migrated = false;
+    for (auto &shortcut : silenceShortcuts) {
+        if (shortcut == QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_S)) {
+            shortcut = action->shortcut();
+            migrated = true;
+        }
+    }
+    if (migrated)
+        Settings.setShortcuts(QStringLiteral("timelineFindSilenceAction"), silenceShortcuts);
     connect(action, &QAction::triggered, this, &TimelineDock::findSilence);
     Actions.add("timelineFindSilenceAction", action, windowTitle());
     action = new QAction(tr("Delete selected pauses"), this);
@@ -3159,13 +3170,35 @@ void TimelineDock::findSilence()
         if (dialog.deleteButton->isEnabled())
             dialog.deleteButton->click();
     });
+    bool scanValid = false;
+    auto renderRanges = [&]() {
+        dialog.ranges->clear();
+        ranges = silenceRanges(QString::fromUtf8(output), fps, frames, dialog.padding->value());
+        for (const auto &range : ranges) {
+            auto item = new QListWidgetItem(tr("%1 – %2 s (%3 s)")
+                                                .arg((start + range.first) / fps, 0, 'f', 2)
+                                                .arg((start + range.second) / fps, 0, 'f', 2)
+                                                .arg((range.second - range.first) / fps, 0, 'f', 2),
+                                            dialog.ranges);
+            item->setSelected(true);
+        }
+        dialog.deleteButton->setEnabled(!ranges.isEmpty());
+        dialog.status->setText(tr("Found %1 pauses. Review before deleting; source "
+                                  "analysis does not include audio filters.")
+                                   .arg(ranges.size()));
+    };
     auto invalidate = [&]() {
+        scanValid = false;
         dialog.ranges->clear();
         ranges.clear();
         dialog.deleteButton->setEnabled(false);
     };
-    for (auto control : {dialog.threshold, dialog.minimum, dialog.padding})
+    for (auto control : {dialog.threshold, dialog.minimum})
         connect(control, &QDoubleSpinBox::valueChanged, &dialog, invalidate);
+    connect(dialog.padding, &QDoubleSpinBox::valueChanged, &dialog, [&]() {
+        if (scanValid)
+            renderRanges();
+    });
     connect(dialog.scanButton, &QPushButton::clicked, &dialog, [&]() {
         invalidate();
         output.clear();
@@ -3223,25 +3256,8 @@ void TimelineDock::findSilence()
                     dialog.status->setText(tr("Audio scan failed. No edits were made."));
                     return;
                 }
-                ranges = silenceRanges(QString::fromUtf8(output),
-                                       fps,
-                                       frames,
-                                       dialog.padding->value());
-                for (const auto &range : ranges) {
-                    auto item = new QListWidgetItem(tr("%1 – %2 s (%3 s)")
-                                                        .arg((start + range.first) / fps, 0, 'f', 2)
-                                                        .arg((start + range.second) / fps, 0, 'f', 2)
-                                                        .arg((range.second - range.first) / fps,
-                                                             0,
-                                                             'f',
-                                                             2),
-                                                    dialog.ranges);
-                    item->setSelected(true);
-                }
-                dialog.deleteButton->setEnabled(!ranges.isEmpty());
-                dialog.status->setText(tr("Found %1 pauses. Review before deleting; source "
-                                          "analysis does not include audio filters.")
-                                           .arg(ranges.size()));
+                scanValid = true;
+                renderRanges();
             });
     connect(dialog.ranges, &QListWidget::itemClicked, &dialog, [&](QListWidgetItem *item) {
         const int row = dialog.ranges->row(item);

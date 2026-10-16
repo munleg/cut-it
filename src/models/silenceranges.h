@@ -7,21 +7,23 @@
 #include <QRegularExpression>
 #include <QString>
 
-// Half-open frame intervals, rounded inward to preserve speech at boundaries.
+// Half-open deletion intervals, rounded inward to preserve speech at boundaries.
+// keepGap is the TOTAL pause retained, shared equally between both edges.
 inline QList<QPair<int, int>> silenceRanges(const QString &log,
                                             double fps,
                                             int frames,
-                                            double padding)
+                                            double keepGap)
 {
     QList<QPair<int, int>> result;
-    if (fps <= 0 || frames <= 0)
+    if (!std::isfinite(fps) || fps <= 0 || frames <= 0 || !std::isfinite(keepGap) || keepGap < 0)
         return result;
+    const double padding = keepGap / 2.0;
     QRegularExpression re(QStringLiteral("silence_(start|end):\\s*([0-9]+(?:\\.[0-9]+)?)"));
     auto matches = re.globalMatch(log);
     double start = -1;
     auto append = [&](double end) {
-        int a = qBound(0, int(std::ceil((start + padding) * fps)), frames);
-        int b = qBound(0, int(std::floor((end - padding) * fps)), frames);
+        int a = int(std::ceil(qBound(0.0, (start + padding) * fps, double(frames))));
+        int b = int(std::floor(qBound(0.0, (end - padding) * fps, double(frames))));
         if (b > a && (result.isEmpty() || a >= result.last().second))
             result.append(qMakePair(a, b));
     };

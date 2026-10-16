@@ -37,7 +37,7 @@ public:
     explicit SilenceDialog(QWidget *parent = nullptr)
         : QDialog(parent)
     {
-        setWindowTitle(tr("Find silence"));
+        setWindowTitle(tr("Silence Removal"));
 
         // Parameters.
         threshold = new QDoubleSpinBox(this);
@@ -46,6 +46,7 @@ public:
         threshold->setSingleStep(1.0);
         threshold->setValue(-35.0);
         threshold->setSuffix(tr(" dB"));
+        threshold->setAccessibleName(tr("Threshold"));
 
         minimum = new QDoubleSpinBox(this);
         minimum->setRange(0.1, 10.0);
@@ -53,13 +54,18 @@ public:
         minimum->setSingleStep(0.1);
         minimum->setValue(0.5);
         minimum->setSuffix(tr(" s"));
+        minimum->setAccessibleName(tr("Minimum duration"));
 
         padding = new QDoubleSpinBox(this);
-        padding->setRange(0.0, 1.0);
+        padding->setRange(0.0, 2.0);
         padding->setDecimals(2);
-        padding->setSingleStep(0.01);
-        padding->setValue(0.08);
+        padding->setSingleStep(0.1);
+        padding->setValue(0.2);
         padding->setSuffix(tr(" s"));
+        padding->setAccessibleName(tr("Keep gap"));
+        padding->setToolTip(tr("Total silence left between speech. The gap is split "
+                               "between both edges and rounded to video frames "
+                               "(for example 0.1 s or 0.2 s)."));
 
         QVBoxLayout *layout = new QVBoxLayout(this);
 
@@ -70,7 +76,7 @@ public:
         parameters->addWidget(new QLabel(tr("Minimum duration:"), this));
         parameters->addWidget(minimum);
         parameters->addSpacing(8);
-        parameters->addWidget(new QLabel(tr("Padding:"), this));
+        parameters->addWidget(new QLabel(tr("Keep gap:"), this));
         parameters->addWidget(padding);
         parameters->addStretch();
         layout->addLayout(parameters);
