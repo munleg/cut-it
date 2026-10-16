@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/icons">
+        <file>cut-it.png</file>
         <file>dark/32x32/4-direction.png</file>
         <file>dark/32x32/audio-input-microphone.png</file>
         <file>dark/32x32/audio-meter.png</file>

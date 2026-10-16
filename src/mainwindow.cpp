@@ -2842,7 +2842,7 @@ void MainWindow::setupCutItWorkspace()
             });
         }
     }
-    setWindowIcon(QIcon());
+    setWindowIcon(QIcon(QStringLiteral(":/icons/cut-it.png")));
     setProperty("cutItCleanWorkspace", true);
     const auto editActions = ui->menuEdit->actions();
     for (auto action : ui->mainToolBar->actions()) {

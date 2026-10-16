@@ -8,6 +8,8 @@ InstallDirRegKey HKCU "Software\Cut-it" "InstallDir"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
 !define MUI_ABORTWARNING
+!define MUI_ICON "windows\cut-it.ico"
+!define MUI_UNICON "windows\cut-it.ico"
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "${PACKAGE}\COPYING"
 !insertmacro MUI_PAGE_DIRECTORY
@@ -57,6 +59,7 @@ Section "Uninstall"
  RMDir /r "$INSTDIR\share"
  RMDir /r "$INSTDIR\Licenses"
  Delete "$INSTDIR\Cut-it.exe"
+ Delete "$INSTDIR\Cut-it.ico"
  Delete "$INSTDIR\COPYING"
  Delete "$INSTDIR\CUT-IT.md"
  Delete "$INSTDIR\Build-packages.txt"
