@@ -1,7 +1,7 @@
 ; Copyright (c) 2026 Cut-it contributors. SPDX-License-Identifier: GPL-3.0-or-later
 Unicode True
 !include "MUI2.nsh"
-Name "Cut-it 0.1.1"
+Name "Cut-it 0.1.2"
 OutFile "${OUTPUT}"
 InstallDir "$LOCALAPPDATA\Programs\Cut-it"
 InstallDirRegKey HKCU "Software\Cut-it" "InstallDir"
@@ -44,8 +44,8 @@ Section "Cut-it"
  CreateShortcut "$SMPROGRAMS\Cut-it\Cut-it.lnk" "$INSTDIR\Cut-it.exe"
  CreateShortcut "$DESKTOP\Cut-it.lnk" "$INSTDIR\Cut-it.exe"
  WriteRegStr HKCU "Software\Cut-it" "InstallDir" "$INSTDIR"
- WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Cut-it" "DisplayName" "Cut-it 0.1.1"
- WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Cut-it" "DisplayVersion" "0.1.1"
+ WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Cut-it" "DisplayName" "Cut-it 0.1.2"
+ WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Cut-it" "DisplayVersion" "0.1.2"
  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Cut-it" "UninstallString" '$\"$INSTDIR\Uninstall.exe$\"'
  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Cut-it" "NoModify" 1
  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Cut-it" "NoRepair" 1

@@ -136,8 +136,19 @@ Rectangle {
         onClicked: root.rightClicked()
     }
 
+    Label {
+        anchors.centerIn: parent
+        width: Math.max(0, parent.width - 32)
+        visible: metadata === null
+        text: qsTr('Animate a clip\n\nSelect a timeline clip, choose an effect in Tools, then enable the clock beside a setting. Move the playhead and change the value to add another keyframe.')
+        wrapMode: Text.WordWrap
+        horizontalAlignment: Text.AlignHCenter
+        color: activePalette.text
+    }
+
     Row {
         anchors.fill: parent
+        visible: metadata !== null
 
         Column {
             z: 1

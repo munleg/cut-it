@@ -236,7 +236,21 @@ Item {
             Button { text: cutItFonts.busy ? qsTr('Downloading…') : qsTr('Get font'); enabled: !cutItFonts.busy; onClicked: cutItFonts.download(onlineFont.currentText) }
         }
         Label { visible: moreFonts.checked; text: cutItFonts.status || qsTr('Lato, Noto Sans and Bebas Neue are ready offline.'); color: '#888888'; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
-        Button { text: qsTr('Advanced text and animation'); onClicked: advanced.checked = true }
+        Button {
+            text: qsTr('Animate text • Keyframes')
+            onClicked: {
+                advanced.checked = true;
+                keyframes.show();
+                keyframes.raise();
+            }
+        }
+        Label {
+            text: qsTr('Animate position, size, color or opacity. Enable the clock beside a setting, move the playhead, then change its value.');
+            color: '#aaaaaa'
+            font.pixelSize: 11
+            wrapMode: Text.WordWrap
+            Layout.fillWidth: true
+        }
     }
     Button {
         id: advanced

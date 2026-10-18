@@ -501,6 +501,30 @@ Player::Player(QWidget *parent)
             m_optionsToolBar->removeAction(action);
     }
     m_optionsToolBar->addWidget(previewOptions);
+    auto previousKeyframe = new QToolButton(this);
+    previousKeyframe->setObjectName(QStringLiteral("cutItPreviousKeyframe"));
+    previousKeyframe->setText(QString(QChar(0x2039)));
+    previousKeyframe->setAccessibleName(tr("Previous transform keyframe"));
+    previousKeyframe->setToolTip(tr("Previous transform keyframe"));
+    previousKeyframe->setFixedSize(24, 28);
+    m_optionsToolBar->addWidget(previousKeyframe);
+    auto keyframeButton = new QToolButton(this);
+    keyframeButton->setObjectName(QStringLiteral("cutItPreviewKeyframe"));
+    keyframeButton->setText(QString(QChar(0x25c7)));
+    keyframeButton->setAccessibleName(tr("Save transform keyframe"));
+    keyframeButton->setToolTip(
+        tr("Save this clip's position, size and rotation at the playhead. "
+           "Move the playhead and adjust the clip to animate it. Right-click for the editor."));
+    keyframeButton->setFixedSize(28, 28);
+    keyframeButton->setStyleSheet(QStringLiteral("QToolButton { font-size: 20px; padding: 0px; }"));
+    m_optionsToolBar->addWidget(keyframeButton);
+    auto nextKeyframe = new QToolButton(this);
+    nextKeyframe->setObjectName(QStringLiteral("cutItNextKeyframe"));
+    nextKeyframe->setText(QString(QChar(0x203a)));
+    nextKeyframe->setAccessibleName(tr("Next transform keyframe"));
+    nextKeyframe->setToolTip(tr("Next transform keyframe"));
+    nextKeyframe->setFixedSize(24, 28);
+    m_optionsToolBar->addWidget(nextKeyframe);
 
     // Create two rows for the toolbars.
     // The toolbars will be layed out in one or two rows depending on the width.

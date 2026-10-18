@@ -19,6 +19,8 @@
 #include "backgroundpreviewwork.h"
 #include "cutitupdate.h"
 #include "qmltypes/cutitfonts.h"
+#include "qmltypes/qmlfilter.h"
+#include "qmltypes/qmlproducer.h"
 #include "qmltypes/thumbnailprovider.h"
 #include <QElapsedTimer>
 #ifdef Q_OS_WIN
@@ -716,6 +718,10 @@ void MainWindow::setupAndConnectDocks()
         if (!producer || !producer->get_int("cutit:text"))
             return;
         auto attached = m_filterController->attachedModel();
+        // Seeking re-emits selection: keep the active pose handles for this clip.
+        auto current = m_filterController->currentFilter();
+        if (current && current->get(QStringLiteral("shotcut:cutItTransform")) == QStringLiteral("1"))
+            return;
         for (int i = 0; i < attached->rowCount(); ++i) {
             const auto meta = attached->getMetadata(i);
             if (meta && meta->objectName() == QStringLiteral("dynamicText")) {
@@ -2961,6 +2967,166 @@ void MainWindow::setupCutItWorkspace()
         addText->setShortcuts(Settings.shortcuts(QStringLiteral("cutItAddText")));
     addAction(addText);
     ui->mainToolBar->insertAction(ui->actionEncode, addText);
+    if (auto button = m_player->findChild<QToolButton *>(QStringLiteral("cutItPreviewKeyframe"))) {
+        auto transform = [this]() -> QmlFilter * {
+            auto meta = m_filterController->attachedModel()->getMetadata(
+                m_filterController->currentIndex());
+            return meta
+                           && (meta->objectName() == QStringLiteral("affineSizePosition")
+                               || meta->objectName() == QStringLiteral("movitSizePosition"))
+                       ? m_filterController->currentFilter()
+                       : nullptr;
+        };
+        auto rectProperty = [](QmlFilter *filter) {
+            return filter->service().get("mlt_service") == QStringLiteral("movit.rect")
+                       ? QStringLiteral("rect")
+                       : QStringLiteral("transition.rect");
+        };
+        auto position = [this](QmlFilter *filter) {
+            auto producer = m_filtersDock->qmlProducer();
+            return producer->position() - (filter->in() - producer->in());
+        };
+        auto previous = m_player->findChild<QToolButton *>(QStringLiteral("cutItPreviousKeyframe"));
+        auto next = m_player->findChild<QToolButton *>(QStringLiteral("cutItNextKeyframe"));
+        auto refresh = [this, button, previous, next, transform, rectProperty, position]() {
+            auto filter = transform();
+            bool atKey = false;
+            int before = -1, after = -1;
+            if (filter) {
+                const int frame = position(filter);
+                auto animation = filter->getAnimation(rectProperty(filter));
+                atKey = animation.is_valid() && animation.is_key(frame);
+                before = filter->getPrevKeyframePosition(rectProperty(filter), frame);
+                after = filter->getNextKeyframePosition(rectProperty(filter), frame);
+                if (before >= frame)
+                    before = -1;
+                if (after <= frame || after >= filter->duration())
+                    after = -1;
+            }
+            button->setText(QString(QChar(atKey ? 0x25c6 : 0x25c7)));
+            previous->setEnabled(before >= 0);
+            next->setEnabled(after >= 0);
+        };
+        connect(m_filtersDock->qmlProducer(), &QmlProducer::positionChanged, this, refresh);
+        connect(m_filterController,
+                &FilterController::currentFilterChanged,
+                this,
+                [this, refresh](QmlFilter *filter, QmlMetadata *, int) {
+                    if (filter)
+                        connect(filter, &QmlFilter::changed, this, refresh);
+                    QTimer::singleShot(0, this, refresh);
+                });
+        for (auto navigation : {previous, next}) {
+            connect(navigation,
+                    &QToolButton::clicked,
+                    this,
+                    [this, navigation, previous, transform, rectProperty, position]() {
+                        auto filter = transform();
+                        if (!filter)
+                            return;
+                        const int frame = position(filter);
+                        const int target
+                            = navigation == previous
+                                  ? filter->getPrevKeyframePosition(rectProperty(filter), frame)
+                                  : filter->getNextKeyframePosition(rectProperty(filter), frame);
+                        if (target >= 0 && target < filter->duration()) {
+                            m_player->pause();
+                            auto producer = m_filtersDock->qmlProducer();
+                            producer->setPosition(target + filter->in() - producer->in());
+                        }
+                    });
+        }
+        connect(
+            button,
+            &QToolButton::clicked,
+            this,
+            [this, transform, rectProperty, position, refresh]() {
+                auto attached = m_filterController->attachedModel();
+                auto producer = m_filtersDock->qmlProducer();
+                if (!attached->isProducerSelected() || attached->isSourceClip()
+                    || producer->isAudio() || !MLT.isClipProducer(producer->producer())
+                    || producer->position() < 0 || producer->position() >= producer->duration()) {
+                    showStatusMessage(
+                        tr("Select a video, image or text clip and place the playhead inside it."));
+                    return;
+                }
+                m_player->pause();
+                m_filtersDock->setWorkspaceMode(2);
+                m_filtersDock->setWindowTitle(tr("Transform"));
+                auto metadata = m_filterController->metadataModel();
+                const auto oldSearch = metadata->search();
+                const auto oldFilter = metadata->filter();
+                metadata->setSearch(QString());
+                metadata->setFilter(MetadataModel::VideoFilter);
+                const bool opened = m_filtersDock->openQuickFilter(QStringLiteral("size_position"));
+                metadata->setSearch(oldSearch);
+                metadata->setFilter(oldFilter);
+                if (!opened)
+                    return;
+                QPointer<QmlFilter> expected = transform();
+                // Let the existing QML transform editor initialize a newly added filter first.
+                QTimer::singleShot(
+                    0, this, [this, expected, transform, rectProperty, position, refresh]() {
+                        if (!expected || expected != transform())
+                            return;
+                        auto filter = expected.data();
+                        const int frame = position(filter);
+                        if (frame < 0 || frame >= filter->duration())
+                            return;
+                        if (filter->animateIn() || filter->animateOut()) {
+                            showStatusMessage(tr("This clip already uses simple animation. Edit it "
+                                                 "in Keyframes before adding pose keyframes."));
+                            return;
+                        }
+                        const auto property = rectProperty(filter);
+                        const auto rect = filter->getRect(property, frame);
+                        if (rect.width() <= 0 || rect.height() <= 0)
+                            return;
+                        const auto rotation
+                            = filter->getDouble(QStringLiteral("transition.fix_rotate_x"), frame);
+                        filter->startUndoParameterCommand(tr("Save transform keyframe"));
+                        filter->set(QStringLiteral("shotcut:cutItTransform"), 1);
+                        filter->set(property, rect, frame, mlt_keyframe_linear);
+                        if (property != QStringLiteral("rect"))
+                            filter->set(QStringLiteral("transition.fix_rotate_x"),
+                                        rotation,
+                                        frame,
+                                        mlt_keyframe_linear);
+                        filter->endUndoCommand();
+                        refresh();
+                        showStatusMessage(
+                            tr("Pose saved. Move the playhead, drag or resize the clip, then click "
+                               "the diamond to save its next pose."));
+                    });
+            });
+        refresh();
+        button->setContextMenuPolicy(Qt::CustomContextMenu);
+        connect(button,
+                &QWidget::customContextMenuRequested,
+                this,
+                [this, button](const QPoint &pos) {
+                    QMenu menu(button);
+                    menu.addAction(ui->actionKeyframes);
+                    menu.exec(button->mapToGlobal(pos));
+                });
+    }
+    // Parameter animation buttons also open this dock directly from QML.
+    // Separate it from Timeline only when needed, including restored layouts.
+    connect(m_keyframesDock, &QDockWidget::visibilityChanged, this, [this](bool visible) {
+        if (!visible)
+            return;
+        QTimer::singleShot(0, this, [this]() {
+            if (!m_keyframesDock->isVisible() || m_keyframesDock->isFloating())
+                return;
+            if (tabifiedDockWidgets(m_timelineDock).contains(m_keyframesDock)) {
+                removeDockWidget(m_keyframesDock);
+                splitDockWidget(m_timelineDock, m_keyframesDock, Qt::Horizontal);
+                m_keyframesDock->show();
+                resizeDocks({m_timelineDock, m_keyframesDock}, {2, 1}, Qt::Horizontal);
+            }
+            m_timelineDock->show();
+        });
+    });
     auto toolbarSpacer = new QWidget(ui->mainToolBar);
     toolbarSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     ui->mainToolBar->insertWidget(ui->actionEncode, toolbarSpacer);
@@ -3360,7 +3526,7 @@ void MainWindow::updateWindowTitle()
     setWindowTitle(QStringLiteral("%1[*] - %2 - %3")
                        .arg(shownName)
                        .arg(profileText)
-                       .arg(QStringLiteral("Cut-it 0.1.1 - Hybrid Timeline")));
+                       .arg(QStringLiteral("Cut-it 0.1.2 - Hybrid Timeline")));
 #endif
 }
 
@@ -4193,6 +4359,12 @@ void MainWindow::onFiltersDockTriggered(bool checked)
 void MainWindow::onKeyframesDockTriggered(bool checked)
 {
     if (checked) {
+        if (property("cutItCleanWorkspace").toBool()) {
+            m_filtersDock->show();
+            m_filtersDock->raise();
+            showStatusMessage(tr("Select a clip and an effect. Enable the clock beside a setting, "
+                                 "move the playhead, then change its value to animate it."));
+        }
         m_keyframesDock->show();
         m_keyframesDock->raise();
     }

@@ -1,4 +1,4 @@
-# Cut-it 0.1.1
+# Cut-it 0.1.2
 
 A free, open-source desktop video editor built on [Shotcut](https://github.com/mltframework/shotcut), with a simpler editing workspace. Windows is the current development focus.
 
@@ -31,9 +31,9 @@ Keep build outputs and personal media outside this repository. The NSIS packagin
 
 ## Downloads
 
-Get the Windows installer from [Cut-it 0.1.1 releases](https://github.com/munleg/cut-it/releases/tag/v0.1.1). The installer is unsigned. Save your work and close Cut-it before updating.
+Get the Windows installer from [Cut-it 0.1.2 releases](https://github.com/munleg/cut-it/releases/tag/v0.1.2). The installer is unsigned. Save your work and close Cut-it before updating.
 
-[Application and dependency source downloads](docs/releases/0.1.1-sources.md) accompany the binary release. These include exact MSYS2 package versions and source-archive links; you do not need to download them to run the editor.
+[Application and dependency source downloads](docs/releases/0.1.2-sources.md) accompany the binary release. These include exact MSYS2 package versions and source-archive links; you do not need to download them to run the editor.
 
 ## Contributing
 
