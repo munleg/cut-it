@@ -7,7 +7,7 @@ This is a test build of Cut-it 0.1.2, not a stable Linux release.
 ## Run in Linux Mint 22
 
 Download and extract the `Cut-it-linux-x86_64-beta` artifact from the successful
-**Cut-it Linux beta** GitHub Actions run. Check `SHA256SUMS.txt` with
+**Cut-it Linux runtime beta** (or **Cut-it Linux beta**) GitHub Actions run. Check `SHA256SUMS.txt` with
 `sha256sum --ignore-missing -c SHA256SUMS.txt` in the extracted directory.
 Corresponding sources are in the separate `Cut-it-linux-corresponding-sources`
 artifact; they are not required to run the editor.
@@ -75,3 +75,10 @@ For a fresh rebuild, set `CUTIT_LINUX_OUTPUT` to a new empty directory.
 folder, corresponding source archives, test logs and SHA256 sums accompany
 the build. The workflow only uploads build artifacts; it does not publish a release.
 GPL and upstream Shotcut attribution remain in the bundle and source tree.
+
+For the faster build, run `bash scripts/build-cutit-linux-runtime.sh` instead.
+It verifies the published Shotcut 26.9.27 runtime and corresponding source
+archive against pinned SHA256 hashes, builds an MLT 7.41 SDK from those sources,
+then compiles and tests Cut-it with Qt 6.10.3. The media libraries stay unchanged;
+the editor binary and its resources are built from the current Cut-it commit.
+Both Cut-it and upstream dependency source archives accompany this variant.
