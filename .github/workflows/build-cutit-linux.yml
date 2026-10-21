@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     env:
-      CUTIT_LINUX_OUTPUT: ${{ runner.temp }}/cutit-linux-build
+      CUTIT_LINUX_OUTPUT: ${{ github.workspace }}/linux-build-output
     steps:
       - uses: actions/checkout@v4
         with:
@@ -52,6 +52,6 @@ jobs:
         with:
           name: Cut-it-linux-build-logs
           path: |
-            ${{ runner.temp }}/cutit-linux-build/*.log
-            ${{ runner.temp }}/cutit-linux-build/build-image.json
+            linux-build-output/*.log
+            linux-build-output/build-image.json
           if-no-files-found: ignore
