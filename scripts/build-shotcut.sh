@@ -1341,8 +1341,8 @@ function feedback_result {
 # Function that checks if the user wanted to cancel what we are doing.
 # returns "stop" or "cont" as appropriate
 function check_abort {
-  # log "$ARG"
-  echo
+  # No external cancellation source is configured for this CLI build.
+  echo cont
 }
 
 ######################################################################
