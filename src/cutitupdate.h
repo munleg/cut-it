@@ -54,14 +54,16 @@ inline Platform currentPlatform()
     return Platform::Unsupported;
 #endif
 }
-inline Release latest(const QJsonArray &releases, const QString &installed,
+inline Release latest(const QJsonArray &releases,
+                      const QString &installed,
                       Platform platform = currentPlatform())
 {
     if (platform == Platform::Unsupported)
         return {};
-    const QRegularExpression assetPattern(platform == Platform::Windows
-        ? QStringLiteral("^Cut-it-[A-Za-z0-9.-]+-Setup\\.exe$")
-        : QStringLiteral("^Cut-it-[A-Za-z0-9.-]+-linux-x86_64\\.(AppImage|tar\\.xz)$"));
+    const QRegularExpression assetPattern(
+        platform == Platform::Windows
+            ? QStringLiteral("^Cut-it-[A-Za-z0-9.-]+-Setup\\.exe$")
+            : QStringLiteral("^Cut-it-[A-Za-z0-9.-]+-linux-x86_64\\.(AppImage|tar\\.xz)$"));
     auto best = parse(installed);
     Release result;
     for (const auto &value : releases) {
