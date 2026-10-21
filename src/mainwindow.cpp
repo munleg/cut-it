@@ -6067,8 +6067,9 @@ void MainWindow::onUpgradeCheckFinished(QNetworkReply *reply)
                                              QString::fromLatin1(CutItUpdate::currentVersion));
     if (release.tag.isEmpty()) {
         if (manual)
-            showStatusMessage(tr("No newer Cut-it release for this platform is available. Installed: %1.")
-                                  .arg(QString::fromLatin1(CutItUpdate::currentVersion)));
+            showStatusMessage(
+                tr("No newer Cut-it release for this platform is available. Installed: %1.")
+                    .arg(QString::fromLatin1(CutItUpdate::currentVersion)));
         return;
     }
     m_upgradeUrl = release.page.toString();
