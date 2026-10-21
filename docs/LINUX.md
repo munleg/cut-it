@@ -8,7 +8,9 @@ This is a test build of Cut-it 0.1.2, not a stable Linux release.
 
 Download and extract the `Cut-it-linux-x86_64-beta` artifact from the successful
 **Cut-it Linux beta** GitHub Actions run. Check `SHA256SUMS.txt` with
-`sha256sum -c SHA256SUMS.txt` in the extracted directory.
+`sha256sum --ignore-missing -c SHA256SUMS.txt` in the extracted directory.
+Corresponding sources are in the separate `Cut-it-linux-corresponding-sources`
+artifact; they are not required to run the editor.
 
 For the AppImage, open a terminal in that directory:
 

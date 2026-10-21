@@ -12,6 +12,8 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 180
+    env:
+      CUTIT_LINUX_OUTPUT: ${{ runner.temp }}/cutit-linux-build
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,11 +28,23 @@ jobs:
           echo "APPIMAGETOOL=$RUNNER_TEMP/appimagetool.AppImage" >> "$GITHUB_ENV"
       - name: Build and test Cut-it with bundled dependencies
         run: bash scripts/build-cutit-linux.sh
-      - name: Upload Linux beta and corresponding sources
+      - name: Upload Linux beta
         uses: actions/upload-artifact@v4
         with:
           name: Cut-it-linux-x86_64-beta
-          path: dist/
+          path: |
+            dist/*-linux-x86_64.AppImage
+            dist/*-linux-x86_64.tar.xz
+            dist/SHA256SUMS.txt
+            dist/SOURCE-COMMIT.txt
+            dist/build-image.json
+            dist/tests.log
+          if-no-files-found: error
+      - name: Upload corresponding sources
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cut-it-linux-corresponding-sources
+          path: dist/*-sources.tar.xz
           if-no-files-found: error
       - name: Upload build diagnostics
         if: always()
@@ -38,6 +52,6 @@ jobs:
         with:
           name: Cut-it-linux-build-logs
           path: |
-            ../linux-build/*.log
-            ../linux-build/build-image.json
+            ${{ runner.temp }}/cutit-linux-build/*.log
+            ${{ runner.temp }}/cutit-linux-build/build-image.json
           if-no-files-found: ignore

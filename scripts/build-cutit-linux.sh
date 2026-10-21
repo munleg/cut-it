@@ -29,7 +29,7 @@ EOF
 docker pull "$image"
 docker image inspect "$image" --format '{{json .RepoDigests}}' > "$output/build-image.json"
 docker run --rm -v "$repo:/input/shotcut:ro" -v "$output:/root/shotcut" \
-    "$image" -c 'git config --global --add safe.directory /input/shotcut; cd /root/shotcut; bash ./build-shotcut.sh' \
+    "$image" -c 'git config --global --add safe.directory /input/shotcut; git config --global --add safe.directory /input/shotcut/.git; cd /root/shotcut; bash ./build-shotcut.sh' \
     2>&1 | tee "$output/build.log"
 test -x "$output/Shotcut/Shotcut.app/bin/shotcut"
 docker run --rm -v "$output:/root/shotcut" "$image" -c '
