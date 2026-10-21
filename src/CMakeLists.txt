@@ -417,20 +417,18 @@ if(UNIX AND NOT APPLE)
   install(DIRECTORY ${CMAKE_SOURCE_DIR}/voices DESTINATION ${CMAKE_INSTALL_DATADIR}/shotcut/)
   install(DIRECTORY ${CMAKE_SOURCE_DIR}/elements DESTINATION ${CMAKE_INSTALL_DATADIR}/shotcut/)
 
-  string(REPLACE . - SHOTCUT_DATE  ${SHOTCUT_VERSION})
-  string(PREPEND SHOTCUT_DATE "20")
-  configure_file(${CMAKE_SOURCE_DIR}/packaging/linux/org.shotcut.Shotcut.metainfo.xml.in
-    ${CMAKE_BINARY_DIR}/packaging/linux/org.shotcut.Shotcut.metainfo.xml)
-  install(FILES ${CMAKE_BINARY_DIR}/packaging/linux/org.shotcut.Shotcut.metainfo.xml
+  install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/resources DESTINATION ${CMAKE_INSTALL_DATADIR}/shotcut/)
+  install(PROGRAMS ${CMAKE_SOURCE_DIR}/packaging/linux/cut-it DESTINATION ${CMAKE_INSTALL_BINDIR})
+  install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/io.github.munleg.CutIt.metainfo.xml
     DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo/)
-  install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/org.shotcut.Shotcut.desktop
+  install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/io.github.munleg.CutIt.desktop
     DESTINATION ${CMAKE_INSTALL_DATADIR}/applications/)
   install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/org.shotcut.Shotcut.xml
     DESTINATION ${CMAKE_INSTALL_DATADIR}/mime/packages/)
   install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/icons/64x64/org.shotcut.Shotcut.png
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/64x64/apps/)
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/64x64/apps/ RENAME io.github.munleg.CutIt.png)
   install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/icons/128x128/org.shotcut.Shotcut.png
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/128x128/apps/)
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/128x128/apps/ RENAME io.github.munleg.CutIt.png)
   install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/shotcut.1
     DESTINATION ${CMAKE_INSTALL_DATADIR}/man/man1/)
 endif()

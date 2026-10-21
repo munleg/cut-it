@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Cut-it
+GenericName=Video Editor
+Comment=Edit video with Cut-it, based on Shotcut
+Exec=cut-it %F
+Icon=io.github.munleg.CutIt
+Terminal=false
+Categories=AudioVideo;Video;AudioVideoEditing;
+MimeType=application/mlt+xml;
+StartupWMClass=Shotcut

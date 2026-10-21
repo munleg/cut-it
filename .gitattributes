@@ -1,0 +1,3 @@
+# Keep Linux build scripts executable by Bash even from a Windows checkout.
+*.sh text eol=lf
+packaging/linux/cut-it text eol=lf

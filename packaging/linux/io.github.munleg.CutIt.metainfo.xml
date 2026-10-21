@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.munleg.CutIt</id>
+  <launchable type="desktop-id">io.github.munleg.CutIt.desktop</launchable>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <name>Cut-it</name>
+  <summary>A video editor based on Shotcut</summary>
+  <description><p>Cut-it is a free and open-source video editor with a simplified editing workspace, text layers, effects, and multitrack editing. It is an independent modification of Shotcut.</p></description>
+  <url type="homepage">https://github.com/munleg/cut-it</url>
+  <url type="bugtracker">https://github.com/munleg/cut-it/issues</url>
+  <provides><binary>cut-it</binary></provides>
+  <content_rating type="oars-1.1" />
+</component>

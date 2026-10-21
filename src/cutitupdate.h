@@ -43,8 +43,25 @@ struct Release
     QString tag;
     QUrl page;
 };
-inline Release latest(const QJsonArray &releases, const QString &installed)
+enum class Platform { Windows, LinuxX64, Unsupported };
+inline Platform currentPlatform()
 {
+#if defined(Q_OS_WIN)
+    return Platform::Windows;
+#elif defined(Q_OS_LINUX) && defined(Q_PROCESSOR_X86_64)
+    return Platform::LinuxX64;
+#else
+    return Platform::Unsupported;
+#endif
+}
+inline Release latest(const QJsonArray &releases, const QString &installed,
+                      Platform platform = currentPlatform())
+{
+    if (platform == Platform::Unsupported)
+        return {};
+    const QRegularExpression assetPattern(platform == Platform::Windows
+        ? QStringLiteral("^Cut-it-[A-Za-z0-9.-]+-Setup\\.exe$")
+        : QStringLiteral("^Cut-it-[A-Za-z0-9.-]+-linux-x86_64\\.(AppImage|tar\\.xz)$"));
     auto best = parse(installed);
     Release result;
     for (const auto &value : releases) {
@@ -59,9 +76,7 @@ inline Release latest(const QJsonArray &releases, const QString &installed)
         for (const auto &assetValue : release.value("assets").toArray()) {
             const auto asset = assetValue.toObject();
             const auto name = asset.value("name").toString();
-            if (!QRegularExpression(QStringLiteral("^Cut-it-[A-Za-z0-9.-]+-Setup\\.exe$"))
-                     .match(name)
-                     .hasMatch())
+            if (!assetPattern.match(name).hasMatch())
                 continue;
             const QUrl url(asset.value("browser_download_url").toString());
             if (asset.value("state").toString() == "uploaded" && asset.value("size").toDouble() > 0

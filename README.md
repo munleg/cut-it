@@ -29,6 +29,13 @@ See [Build-CutIt.ps1](Build-CutIt.ps1), [upstream build documentation](README-SH
 
 Keep build outputs and personal media outside this repository. The NSIS packaging definition is [packaging/Cut-it.nsi](packaging/Cut-it.nsi).
 
+## Linux beta
+
+Linux Mint 22 / Ubuntu 24.04 on x86-64 is the first Linux test target. The
+**Cut-it Linux beta** workflow builds an AppImage and portable archive with bundled
+dependencies and corresponding sources. See [Linux build and test instructions](docs/LINUX.md).
+Linux playback and export acceptance must pass before a stable Linux release.
+
 ## Downloads
 
 Get the Windows installer from [Cut-it 0.1.2 releases](https://github.com/munleg/cut-it/releases/tag/v0.1.2). The installer is unsigned. Save your work and close Cut-it before updating.

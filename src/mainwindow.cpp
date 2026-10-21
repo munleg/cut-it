@@ -6067,7 +6067,7 @@ void MainWindow::onUpgradeCheckFinished(QNetworkReply *reply)
                                              QString::fromLatin1(CutItUpdate::currentVersion));
     if (release.tag.isEmpty()) {
         if (manual)
-            showStatusMessage(tr("No newer Cut-it Windows release is available. Installed: %1.")
+            showStatusMessage(tr("No newer Cut-it release for this platform is available. Installed: %1.")
                                   .arg(QString::fromLatin1(CutItUpdate::currentVersion)));
         return;
     }
@@ -6076,7 +6076,7 @@ void MainWindow::onUpgradeCheckFinished(QNetworkReply *reply)
         QMessageBox::Information,
         tr("Cut-it update available"),
         tr("Cut-it %1 is available. You have %2.\n\nOpen the release page to download the "
-           "installer? Save your project and close Cut-it before installing.")
+           "update? Save your project and close Cut-it before updating.")
             .arg(release.tag, QString::fromLatin1(CutItUpdate::currentVersion)),
         QMessageBox::Yes | QMessageBox::Cancel,
         this);

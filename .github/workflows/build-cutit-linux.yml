@@ -1,0 +1,43 @@
+name: Cut-it Linux beta
+on:
+  workflow_dispatch:
+  push:
+    branches: [linux-beta]
+permissions:
+  contents: read
+concurrency:
+  group: cutit-linux-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Prepare AppImage packager
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y desktop-file-utils
+          curl --fail --location --retry 3 -o "$RUNNER_TEMP/appimagetool.AppImage" \
+            https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x "$RUNNER_TEMP/appimagetool.AppImage"
+          echo "APPIMAGETOOL=$RUNNER_TEMP/appimagetool.AppImage" >> "$GITHUB_ENV"
+      - name: Build and test Cut-it with bundled dependencies
+        run: bash scripts/build-cutit-linux.sh
+      - name: Upload Linux beta and corresponding sources
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cut-it-linux-x86_64-beta
+          path: dist/
+          if-no-files-found: error
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cut-it-linux-build-logs
+          path: |
+            ../linux-build/*.log
+            ../linux-build/build-image.json
+          if-no-files-found: ignore

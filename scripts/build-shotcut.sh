@@ -71,6 +71,8 @@ MLT_REVISION=
 LOG_COLORS=0
 SHOTCUT_HEAD=1
 SHOTCUT_REVISION=
+SHOTCUT_REPOSITORY="https://github.com/mltframework/shotcut.git"
+SHOTCUT_CMAKE_ARGS=
 SHOTCUT_VERSION=$(date '+%y.%-m.%-d')
 ENABLE_RUBBERBAND=1
 RUBBERBAND_HEAD=0
@@ -576,7 +578,7 @@ function set_globals {
   REPOLOCS[4]="https://chromium.googlesource.com/webm/libvpx.git"
   REPOLOCS[5]="https://github.com/ddennedy/movit.git"
   REPOLOCS[6]="https://github.com/ddennedy/libspatialaudio.git"
-  REPOLOCS[7]="https://github.com/mltframework/shotcut.git"
+  REPOLOCS[7]="$SHOTCUT_REPOSITORY"
   REPOLOCS[8]="https://github.com/swh/ladspa.git"
   REPOLOCS[9]="https://github.com/OpenMathLib/OpenBLAS.git"
   REPOLOCS[10]="https://github.com/georgmartius/vid.stab.git"
@@ -942,7 +944,7 @@ function set_globals {
 
   #####
   # shotcut
-  CONFIG[7]="cmake -G Ninja -D CMAKE_PREFIX_PATH=$QTDIR -D SHOTCUT_VERSION=$SHOTCUT_VERSION $CMAKE_DEBUG_FLAG"
+  CONFIG[7]="cmake -G Ninja -D CMAKE_PREFIX_PATH=$QTDIR -D SHOTCUT_VERSION=$SHOTCUT_VERSION $CMAKE_DEBUG_FLAG $SHOTCUT_CMAKE_ARGS"
   if test "$TARGET_OS" = "Darwin" ; then
     CONFIG[7]="${CONFIG[7]} -D CMAKE_INSTALL_PREFIX=."
     CONFIG[7]="${CONFIG[7]} -D CMAKE_OSX_ARCHITECTURES='arm64;x86_64'"

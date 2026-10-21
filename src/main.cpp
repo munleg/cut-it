@@ -86,7 +86,7 @@ static bool isVulkanDrawMethod(int argc, char **argv, QString *detail)
     if (appDataDir.isEmpty()) {
         QSettings settings(QSettings::NativeFormat,
                            QSettings::UserScope,
-                           QStringLiteral("Meltytech"),
+                           QStringLiteral("CutIt"),
                            QStringLiteral("Shotcut"));
         appDataDir = settings.value(QStringLiteral("appdatadir")).toString();
         if (appDataDir.isEmpty() || !QFile::exists(appDataDir + QStringLiteral("/shotcut.ini"))) {
@@ -192,7 +192,7 @@ public:
         setOrganizationName("CutIt");
 #if defined(Q_OS_UNIX) && !defined(Q_OS_MAC)
         setOrganizationDomain("shotcut.org");
-        setDesktopFileName("org.shotcut.Shotcut");
+        setDesktopFileName("io.github.munleg.CutIt");
 #else
         setOrganizationDomain("meltytech.com");
 #endif
