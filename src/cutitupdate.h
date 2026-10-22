@@ -63,7 +63,7 @@ inline Release latest(const QJsonArray &releases,
     const QRegularExpression assetPattern(
         platform == Platform::Windows
             ? QStringLiteral("^Cut-it-[A-Za-z0-9.-]+-Setup\\.exe$")
-            : QStringLiteral("^Cut-it-[A-Za-z0-9.-]+-linux-x86_64\\.(AppImage|tar\\.xz)$"));
+            : QStringLiteral("^Cut-it-[A-Za-z0-9.-]+-linux-x86_64\\.(AppImage|tar\\.xz|deb)$"));
     auto best = parse(installed);
     Release result;
     for (const auto &value : releases) {

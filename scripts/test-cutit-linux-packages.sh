@@ -21,3 +21,12 @@ cp "$packages/Cut-it-$version-linux-x86_64.AppImage" "$work/Folder With Spaces/C
 chmod +x "$work/Folder With Spaces/Cut-it.AppImage"
 APPIMAGE_EXTRACT_AND_RUN=1 "$work/Folder With Spaces/Cut-it.AppImage" --version
 echo 'PASS: portable and AppImage packages launch from a path containing spaces.'
+deb="$packages/Cut-it-$version-linux-x86_64.deb"
+test "$(dpkg-deb -f "$deb" Package)" = cut-it
+test "$(dpkg-deb -f "$deb" Architecture)" = amd64
+dpkg --compare-versions "$(dpkg-deb -f "$deb" Version)" lt "${version%%-linux-beta.*}"
+dpkg-deb -x "$deb" "$work/deb"
+test "$(readlink "$work/deb/usr/bin/cut-it")" = /opt/cut-it/cut-it
+test -s "$work/deb/usr/share/applications/io.github.munleg.CutIt.desktop"
+"$work/deb/opt/cut-it/cut-it" --version
+echo 'PASS: Debian package metadata, desktop entry, version ordering, and bundled launcher.'

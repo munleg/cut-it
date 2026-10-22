@@ -35,6 +35,7 @@ jobs:
           path: |
             dist/*-linux-x86_64.AppImage
             dist/*-linux-x86_64.tar.xz
+            dist/*-linux-x86_64.deb
             dist/SHA256SUMS.txt
             dist/SOURCE-COMMIT.txt
             dist/RUNTIME-SOURCE.txt
@@ -57,3 +58,56 @@ jobs:
             linux-build-output/*.log
             linux-build-output/build-image.json
           if-no-files-found: ignore
+  publish-apt:
+    if: github.ref == 'refs/heads/linux-beta'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: Cut-it-linux-*
+          path: apt-input
+          merge-multiple: true
+      - name: Build and verify signed APT repository
+        env:
+          APT_SIGNING_KEY: ${{ secrets.CUTIT_APT_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$APT_SIGNING_KEY" || { echo 'Configure CUTIT_APT_SIGNING_KEY first.' >&2; exit 1; }
+          sudo apt-get update
+          sudo apt-get install -y apt-utils gnupg
+          export GNUPGHOME="$RUNNER_TEMP/cutit-apt-gnupg"
+          install -d -m 700 "$GNUPGHOME"
+          trap 'gpgconf --kill gpg-agent; rm -rf -- "$GNUPGHOME"' EXIT
+          printf '%s' "$APT_SIGNING_KEY" | gpg --batch --import
+          bash scripts/build-cutit-apt-repository.sh apt-input apt-site
+      - name: Test APT installation on clean Ubuntu 24.04
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$PWD/apt-site:/repo:ro" -v "$PWD/scripts:/checks:ro" \
+            ubuntu:24.04 bash /checks/test-cutit-apt-repository.sh 2>&1 | tee apt-install-tests.log
+      - name: Upload APT installation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cut-it-apt-install-logs
+          path: apt-install-tests.log
+          if-no-files-found: ignore
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: apt-site
+      - name: Publish APT repository
+        id: deployment
+        uses: actions/deploy-pages@v4

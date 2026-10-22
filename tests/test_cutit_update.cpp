@@ -69,6 +69,9 @@ private slots:
         QVERIFY(latest({linux}, "0.1.2", Platform::Windows).tag.isEmpty());
         QCOMPARE(latest({windows, linux}, "0.1.2", Platform::LinuxX64).tag, QString("v0.2.0"));
         QCOMPARE(latest({linux, portable}, "0.1.2", Platform::LinuxX64).tag, QString("v0.3.0"));
+        const auto deb = release("v0.3.0", false, "github.com", "Cut-it-0.3.0-linux-x86_64.deb");
+        QCOMPARE(latest({deb}, "0.1.2", Platform::LinuxX64).tag, QString("v0.3.0"));
+        QVERIFY(latest({deb}, "0.1.2", Platform::Windows).tag.isEmpty());
         QVERIFY(latest({linux}, "0.1.2", Platform::Unsupported).tag.isEmpty());
         const auto foreign
             = release("v0.4.0", false, "example.com", "Cut-it-0.4.0-linux-x86_64.AppImage");

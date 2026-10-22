@@ -35,6 +35,7 @@ jobs:
           path: |
             dist/*-linux-x86_64.AppImage
             dist/*-linux-x86_64.tar.xz
+            dist/*-linux-x86_64.deb
             dist/*.txt
             dist/*.json
             dist/tests.log
