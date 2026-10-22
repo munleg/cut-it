@@ -38,6 +38,7 @@ jobs:
             dist/*.txt
             dist/*.json
             dist/tests.log
+            dist/package-tests.log
           if-no-files-found: error
       - name: Upload corresponding sources
         uses: actions/upload-artifact@v4

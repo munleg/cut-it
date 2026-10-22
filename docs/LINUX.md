@@ -61,13 +61,14 @@ and terminal output. Do not include private media.
 On x86-64 Linux with Docker, commit source changes and run:
 
 ```sh
-bash scripts/build-cutit-linux.sh
+bash scripts/build-cutit-linux-runtime.sh
 ```
 
 Set `APPIMAGETOOL` to the absolute path of an official appimagetool executable
 and install `desktop-file-utils` first. The workflow does this automatically.
-The build uses Shotcut's Qt 6.10.3 Ubuntu 22.04 container, compiles dependencies,
-and checks out the exact Cut-it commit from the mounted local repository.
+The standard beta build uses Shotcut's pinned Qt 6.10.3 Ubuntu 22.04 container
+and a checksum-verified published media runtime. It compiles the exact Cut-it
+commit exported from the local repository, avoiding container Git ownership issues.
 It never substitutes an upstream Shotcut binary for Cut-it. Output is in `dist/`.
 For a fresh rebuild, set `CUTIT_LINUX_OUTPUT` to a new empty directory.
 
@@ -76,9 +77,17 @@ folder, corresponding source archives, test logs and SHA256 sums accompany
 the build. The workflow only uploads build artifacts; it does not publish a release.
 GPL and upstream Shotcut attribution remain in the bundle and source tree.
 
-For the faster build, run `bash scripts/build-cutit-linux-runtime.sh` instead.
-It verifies the published Shotcut 26.9.27 runtime and corresponding source
+The build verifies the published Shotcut 26.9.27 runtime and corresponding source
 archive against pinned SHA256 hashes, builds an MLT 7.41 SDK from those sources,
 then compiles and tests Cut-it with Qt 6.10.3. The media libraries stay unchanged;
 the editor binary and its resources are built from the current Cut-it commit.
 Both Cut-it and upstream dependency source archives accompany this variant.
+
+Both beta workflows use this build path. After the seven C++ tests, the finished
+portable archive and AppImage are launched headlessly from a directory containing
+spaces. The portable launcher is also checked with software rendering enabled.
+Results accompany the download in `package-tests.log`. These startup checks do
+not replace the interactive playback, editing, audio, and export checklist above.
+
+The original full dependency build remains available for development through
+`bash scripts/build-cutit-linux.sh`; it is not the standard beta packaging path.

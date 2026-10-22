@@ -6,6 +6,8 @@ repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 version=0.1.2-linux-beta.1
 image=mltframework/shotcut-build:qt6.10.3-ubuntu22.04@sha256:5c0a901bba3c923d6c03336df2e463e0695ee4c7b107271f2f8c3a5499bd29c1
 output=${CUTIT_LINUX_OUTPUT:-"$repo/../linux-runtime-build"}
+command -v docker >/dev/null || { echo 'Docker is required to build the Linux bundle.' >&2; exit 1; }
+[[ $(uname -m) == x86_64 ]] || { echo 'This build targets x86_64 Linux.' >&2; exit 1; }
 git -C "$repo" diff --exit-code
 git -C "$repo" diff --cached --exit-code
 revision=$(git -C "$repo" rev-parse HEAD)
@@ -30,9 +32,12 @@ docker run --rm -v "$output:/work" "$image" /work/cutit-source/scripts/compile-c
     2>&1 | tee "$output/build.log"
 mkdir -p "$repo/dist"
 bash "$repo/scripts/package-cutit-linux.sh" "$output/Shotcut.app" "$repo/dist" "$version"
+docker run --rm -v "$repo/dist:/packages:ro" -v "$output:/work" "$image" \
+    /work/cutit-source/scripts/test-cutit-linux-packages.sh /packages "$version" \
+    2>&1 | tee "$output/package-tests.log"
 cp "$output/upstream-sources.txz" "$repo/dist/Shotcut-runtime-26.9.27-sources.tar.xz"
 git -C "$repo" archive --prefix=cut-it/ HEAD | xz > "$repo/dist/Cut-it-$version-sources.tar.xz"
-cp "$output/build-image.json" "$output/tests.log" "$repo/dist/"
+cp "$output/build-image.json" "$output/tests.log" "$output/package-tests.log" "$repo/dist/"
 printf '%s\n' "$revision" > "$repo/dist/SOURCE-COMMIT.txt"
 printf '%s\n' "$base/shotcut-linux-x86_64-26.9.27.txz" > "$repo/dist/RUNTIME-SOURCE.txt"
 (cd "$repo/dist" && sha256sum Cut-it-* Shotcut-*-sources.tar.xz > SHA256SUMS.txt)
