@@ -209,7 +209,11 @@ MainWindow::MainWindow()
     LOG_DEBUG() << "begin";
     LOG_INFO() << "device pixel ratio =" << devicePixelRatioF();
     connect(&m_autosaveTimer, SIGNAL(timeout()), this, SLOT(onAutosaveTimeout()));
-    m_autosaveTimer.start(AUTOSAVE_TIMEOUT_MS);
+    const int autosaveInterval = QSettings().value("cutit/autosaveIntervalMs", AUTOSAVE_TIMEOUT_MS).toInt();
+    m_autosaveTimer.start(autosaveInterval == 30000 || autosaveInterval == 120000
+                                 || autosaveInterval == 300000
+                             ? autosaveInterval
+                             : AUTOSAVE_TIMEOUT_MS);
 
     // Initialize all QML types
     QmlUtilities::registerCommonTypes();
@@ -1163,6 +1167,29 @@ MainWindow::~MainWindow()
 void MainWindow::setupSettingsMenu()
 {
     LOG_DEBUG() << "begin";
+
+    auto *autosaveMenu = ui->menuSettings->addMenu(tr("Autosave Recovery"));
+    autosaveMenu->setToolTipsVisible(true);
+    auto *autosaveGroup = new QActionGroup(this);
+    const QList<QPair<QString, int>> intervals = {{tr("Every 30 seconds"), 30000},
+                                                {tr("Every minute"), 60000},
+                                                {tr("Every 2 minutes"), 120000},
+                                                {tr("Every 5 minutes"), 300000}};
+    for (const auto &interval : intervals) {
+        auto *action = autosaveMenu->addAction(interval.first);
+        action->setObjectName(QStringLiteral("cutitAutosave%1").arg(interval.second));
+        action->setCheckable(true);
+        action->setData(interval.second);
+        action->setChecked(m_autosaveTimer.interval() == interval.second);
+        action->setToolTip(tr("Saves a separate recovery copy while your project has unsaved changes. "
+                              "Use Save to keep changes in your project file."));
+        autosaveGroup->addAction(action);
+    }
+    connect(autosaveGroup, &QActionGroup::triggered, this, [this](QAction *action) {
+        const int interval = action->data().toInt();
+        QSettings().setValue("cutit/autosaveIntervalMs", interval);
+        m_autosaveTimer.start(interval);
+    });
 
     Mlt::Filter filter(MLT.profile(), "color_transform");
     if (!filter.is_valid()) {
@@ -2136,6 +2163,11 @@ void MainWindow::doAutosave()
         if (!success) {
             LOG_ERROR() << "failed to open autosave file for writing" << m_autosaveFile->fileName();
         }
+        QMetaObject::invokeMethod(this, [this, success]() {
+            statusBar()->showMessage(success ? tr("Recovery copy saved")
+                                             : tr("Recovery save failed. Please save your project."),
+                                     success ? 3000 : 10000);
+        }, Qt::QueuedConnection);
     }
 }
 
